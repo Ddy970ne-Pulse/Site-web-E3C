@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Phone, ArrowRight, Mail } from "lucide-react";
+import { ArrowRight, Mail } from "lucide-react";
 
 const WHATSAPP_SVG = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -12,20 +12,9 @@ export default function Contact({ whatsapp }) {
 
   const channels = [
     {
-      icon: Phone,
-      label: "Téléphone",
-      value: "0690 44 97 14",
-      cta: "Appeler",
-      href: "tel:0690449714",
-      style: "border-[#D4AF37]/20 hover:border-[#D4AF37]/50",
-      iconBg: "bg-[#D4AF37]/10",
-      iconColor: "text-[#D4AF37]",
-      btnStyle: "bg-[#D4AF37] text-black hover:bg-[#E6C65A]",
-    },
-    {
       icon: WHATSAPP_SVG,
       label: "WhatsApp",
-      value: "0690 44 97 14",
+      value: "Réponse instantanée",
       cta: "Écrire sur WhatsApp",
       href: `https://wa.me/${whatsapp}?text=Bonjour%20E3C%2C%20je%20souhaite%20un%20devis%20gratuit.`,
       external: true,

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Phone, MapPin, User, LogIn } from "lucide-react";
+import { MapPin, User, LogIn } from "lucide-react";
 
 const WHATSAPP_SVG = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -13,7 +13,7 @@ const services = [
   "Terrassement & VRD", "Plomberie & Sanitaire", "Électricité Générale",
 ];
 
-export default function Footer({ whatsapp, phone }) {
+export default function Footer({ whatsapp }) {
   const navigate = useNavigate();
 
   const scrollTo = (id) => {
@@ -54,14 +54,7 @@ export default function Footer({ whatsapp, phone }) {
                 data-testid="footer-whatsapp"
                 className="inline-flex items-center gap-2 bg-green-600 text-white font-semibold text-xs px-4 py-2.5 hover:bg-green-500 transition-colors rounded-sm"
               >
-                <WHATSAPP_SVG /> WhatsApp
-              </a>
-              <a
-                href={`tel:${phone.replace(/\s/g, "")}`}
-                data-testid="footer-phone"
-                className="inline-flex items-center gap-2 border border-white/10 text-gray-300 font-semibold text-xs px-4 py-2.5 hover:border-[#D4AF37]/40 hover:text-[#D4AF37] transition-colors rounded-sm"
-              >
-                <Phone size={12} /> {phone}
+                <WHATSAPP_SVG /> WhatsApp — Devis gratuit
               </a>
             </div>
 
@@ -123,14 +116,6 @@ export default function Footer({ whatsapp, phone }) {
               Coordonnées
             </h4>
             <ul className="space-y-4">
-              <li className="flex items-start gap-3">
-                <Phone size={13} className="text-[#D4AF37] mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-xs text-gray-500 mb-0.5">Tél / WhatsApp</p>
-                  <a href={`tel:${phone.replace(/\s/g, "")}`}
-                    className="text-white text-sm font-medium hover:text-[#D4AF37] transition-colors">{phone}</a>
-                </div>
-              </li>
               <li className="flex items-start gap-3">
                 <MapPin size={13} className="text-[#D4AF37] mt-0.5 flex-shrink-0" />
                 <div>

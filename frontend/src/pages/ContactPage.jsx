@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
-  Phone, Mail, MapPin, Clock, MessageSquare, Send, CheckCircle, AlertCircle
+  Mail, MapPin, Clock, MessageSquare, Send, CheckCircle, AlertCircle
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -10,7 +10,6 @@ import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const WHATSAPP = "590690449714";
-const PHONE = "0690 44 97 14";
 
 const WHATSAPP_SVG = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -31,19 +30,10 @@ const SUBJECTS = [
 
 const contactChannels = [
   {
-    icon: Phone,
-    title: "Téléphone",
-    subtitle: "Appelez-nous directement",
-    value: PHONE,
-    href: "tel:0690449714",
-    color: "text-[#D4AF37]",
-    bg: "bg-[#D4AF37]/10 border-[#D4AF37]/20",
-  },
-  {
     icon: WHATSAPP_SVG,
     title: "WhatsApp",
     subtitle: "Message instantané",
-    value: PHONE,
+    value: "Réponse rapide garantie",
     href: `https://wa.me/${WHATSAPP}?text=Bonjour%20E3C%2C%20je%20souhaite%20un%20renseignement.`,
     color: "text-green-400",
     bg: "bg-green-500/10 border-green-500/20",
@@ -110,7 +100,7 @@ export default function ContactPage() {
 
   return (
     <div className="bg-[#0A0A0A] min-h-screen">
-      <Navbar whatsapp={WHATSAPP} phone={PHONE} />
+      <Navbar whatsapp={WHATSAPP} />
 
       {/* Hero */}
       <section className="relative pt-32 pb-16 md:pt-40 md:pb-20 overflow-hidden">
@@ -179,19 +169,6 @@ export default function ContactPage() {
                 Contact rapide
               </p>
               <a
-                href={`tel:0690449714`}
-                data-testid="contact-page-phone"
-                className="flex items-center gap-3 w-full p-4 bg-[#121212] border border-white/5 hover:border-[#D4AF37]/30 transition-all rounded-sm group"
-              >
-                <div className="w-9 h-9 bg-[#D4AF37]/10 flex items-center justify-center rounded-sm group-hover:bg-[#D4AF37]/20 transition-colors flex-shrink-0">
-                  <Phone size={16} className="text-[#D4AF37]" />
-                </div>
-                <div>
-                  <p className="text-white text-sm font-medium">{PHONE}</p>
-                  <p className="text-gray-500 text-xs">Appel direct</p>
-                </div>
-              </a>
-              <a
                 href={`https://wa.me/${WHATSAPP}?text=Bonjour%20E3C%2C%20je%20souhaite%20un%20renseignement.`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -202,8 +179,8 @@ export default function ContactPage() {
                   <span className="text-green-400"><WHATSAPP_SVG /></span>
                 </div>
                 <div>
-                  <p className="text-white text-sm font-medium">{PHONE}</p>
-                  <p className="text-gray-500 text-xs">WhatsApp (optionnel)</p>
+                  <p className="text-white text-sm font-medium">WhatsApp</p>
+                  <p className="text-gray-500 text-xs">Devis gratuit · Réponse rapide</p>
                 </div>
               </a>
             </div>
@@ -369,7 +346,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <Footer whatsapp={WHATSAPP} phone={PHONE} />
+      <Footer whatsapp={WHATSAPP} />
       <FloatingWhatsApp whatsapp={WHATSAPP} />
     </div>
   );
