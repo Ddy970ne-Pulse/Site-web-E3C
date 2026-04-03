@@ -32,8 +32,15 @@ function AutoRedirect() {
   return null;
 }
 
+import { SEO } from "@/components/SEO";
+
 const Home = () => (
   <div className="bg-[#0A0A0A] min-h-screen">
+    <SEO
+      title="Entreprise de Constructions BTP"
+      description="E3C, votre entreprise de construction BTP en Guadeloupe. Maçonnerie, toiture, rénovation, carrelage, peinture. Devis gratuit en ligne."
+      url="/"
+    />
     <Navbar whatsapp={WHATSAPP_NUMBER} />
     <Hero whatsapp={WHATSAPP_NUMBER} />
     <Services whatsapp={WHATSAPP_NUMBER} />

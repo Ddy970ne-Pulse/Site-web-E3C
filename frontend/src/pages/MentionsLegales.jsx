@@ -2,12 +2,14 @@ import { Link } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 
 const WHATSAPP = "590690449714";
 
 export default function MentionsLegales() {
   return (
     <div className="bg-[#0A0A0A] min-h-screen">
+      <SEO title="Mentions légales" description="Mentions légales de E3C, entreprise de construction BTP en Guadeloupe. Éditeur, hébergement, RGPD." url="/mentions-legales" />
       <Navbar whatsapp={WHATSAPP} />
 
       <main className="max-w-3xl mx-auto px-6 pt-32 pb-20">

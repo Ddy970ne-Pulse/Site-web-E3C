@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ChevronRight, ChevronLeft, CheckCircle, Building2, Home, Layers, Hammer, PaintBucket, Wrench, Zap, Droplets, Trees, HelpCircle, Check, Loader } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const WHATSAPP = "590690449714";
@@ -169,6 +170,7 @@ export default function DevisWizard() {
 
   return (
     <div className="bg-[#0A0A0A] min-h-screen">
+      <SEO title="Demande de devis gratuit" description="Obtenez votre devis BTP gratuit en Guadeloupe. Répondez à quelques questions et E3C vous recontacte sous 24h." url="/devis" />
       <Navbar whatsapp={WHATSAPP} />
       <div className="max-w-2xl mx-auto px-5 pt-28 pb-16">
         {/* Header */}

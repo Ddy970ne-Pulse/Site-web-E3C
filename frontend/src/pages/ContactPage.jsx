@@ -7,6 +7,7 @@ import {
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
+import { SEO } from "@/components/SEO";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const WHATSAPP = "590690449714";
@@ -100,6 +101,7 @@ export default function ContactPage() {
 
   return (
     <div className="bg-[#0A0A0A] min-h-screen">
+      <SEO title="Contactez-nous" description="Contactez E3C en Guadeloupe. WhatsApp, formulaire de contact. Réponse rapide garantie." url="/contact" />
       <Navbar whatsapp={WHATSAPP} />
 
       {/* Hero */}

@@ -2,12 +2,14 @@ import { Link } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 
 const WHATSAPP = "590690449714";
 
 export default function CGV() {
   return (
     <div className="bg-[#0A0A0A] min-h-screen">
+      <SEO title="Conditions Générales de Vente" description="CGV de E3C en Guadeloupe : devis, paiements, garanties décennale, biennale et de parfait achèvement." url="/cgv" />
       <Navbar whatsapp={WHATSAPP} />
 
       <main className="max-w-3xl mx-auto px-6 pt-32 pb-20">
