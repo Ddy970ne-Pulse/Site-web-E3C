@@ -172,6 +172,19 @@ class ContactForm(BaseModel):
     service: str
     message: Optional[str] = ""
 
+class QuoteRequestCreate(BaseModel):
+    project_type: str
+    services: List[str]
+    description: str
+    surface: Optional[str] = ""
+    commune: str
+    address: Optional[str] = ""
+    budget_range: Optional[str] = ""
+    desired_delay: Optional[str] = ""
+    name: str
+    email: str
+    phone: Optional[str] = ""
+
 class CheckoutRequest(BaseModel):
     invoice_id: str
     tranche_id: str
@@ -631,6 +644,57 @@ async def submit_contact(form: ContactForm):
     doc["submitted_at"] = datetime.now(timezone.utc).isoformat()
     await db.contacts.insert_one({**doc, "_id": doc["id"]})
     return doc
+
+@api_router.post("/quote-requests")
+async def create_quote_request(body: QuoteRequestCreate, request: Request):
+    uid = str(uuid.uuid4())
+    # Try to link to existing client account
+    existing_user = await db.users.find_one({"email": body.email.lower()}, {"_id": 0})
+    doc = {
+        "id": uid,
+        "project_type": body.project_type,
+        "services": body.services,
+        "description": body.description,
+        "surface": body.surface,
+        "commune": body.commune,
+        "address": body.address,
+        "budget_range": body.budget_range,
+        "desired_delay": body.desired_delay,
+        "name": body.name,
+        "email": body.email.lower(),
+        "phone": body.phone,
+        "client_id": existing_user["id"] if existing_user else None,
+        "status": "new",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.quote_requests.insert_one({**doc, "_id": uid})
+    # Notify admin
+    html = f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+    <div style="background:#D4AF37;padding:20px;text-align:center"><h1 style="color:#000;margin:0">E3C — Nouvelle demande de devis</h1></div>
+    <div style="padding:30px;background:#f9f9f9">
+      <p><b>Client :</b> {body.name} ({body.email})</p>
+      <p><b>Projet :</b> {body.project_type}</p>
+      <p><b>Prestations :</b> {', '.join(body.services)}</p>
+      <p><b>Description :</b> {body.description}</p>
+      <p><b>Commune :</b> {body.commune}</p>
+      <p><b>Budget :</b> {body.budget_range or 'Non précisé'}</p>
+      <p><b>Délai :</b> {body.desired_delay or 'Non précisé'}</p>
+    </div></div>"""
+    await send_email(ADMIN_EMAIL, f"Nouvelle demande de devis — {body.name}", html)
+    return doc
+
+@api_router.get("/quote-requests")
+async def list_quote_requests(request: Request):
+    await require_admin(request)
+    requests_list = await db.quote_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return requests_list
+
+@api_router.put("/quote-requests/{req_id}/status")
+async def update_quote_request_status(req_id: str, request: Request):
+    await require_admin(request)
+    body = await request.json()
+    await db.quote_requests.update_one({"id": req_id}, {"$set": {"status": body.get("status", "viewed")}})
+    return {"message": "Statut mis à jour"}
 
 @api_router.get("/")
 async def root():

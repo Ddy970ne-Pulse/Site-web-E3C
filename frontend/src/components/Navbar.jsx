@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Phone, X, Menu, User, LogIn, FileText, Home, Briefcase, Image, MapPin, HelpCircle, Mail } from "lucide-react";
+import { X, LogIn, UserPlus, User, Home, Briefcase, Image, MapPin, HelpCircle, Mail, FileEdit } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const WHATSAPP_ICON = () => (
@@ -9,7 +9,7 @@ const WHATSAPP_ICON = () => (
   </svg>
 );
 
-export default function Navbar({ whatsapp, phone }) {
+export default function Navbar({ whatsapp }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
@@ -23,10 +23,8 @@ export default function Navbar({ whatsapp, phone }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close on route change
   useEffect(() => { setOpen(false); }, [location.pathname]);
 
-  // Lock body scroll when open
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -49,11 +47,11 @@ export default function Navbar({ whatsapp, phone }) {
     { icon: MapPin, label: "Zone d'intervention", action: () => scrollTo("#zone") },
     { icon: Mail, label: "Contact", action: () => { setOpen(false); navigate("/contact"); } },
     { icon: HelpCircle, label: "FAQ", action: () => scrollTo("#faq") },
+    { icon: FileEdit, label: "Demander un devis", action: () => { setOpen(false); navigate("/devis"); }, highlight: true },
   ];
 
   return (
     <>
-      {/* Header bar */}
       <header
         data-testid="navbar"
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
@@ -64,45 +62,64 @@ export default function Navbar({ whatsapp, phone }) {
       >
         <div className="max-w-7xl mx-auto px-5 md:px-10 h-16 md:h-20 flex items-center justify-between">
           {/* Logo */}
-          <Link
-            to="/"
-            data-testid="navbar-logo"
-            className="flex items-center gap-2.5 group flex-shrink-0"
-          >
+          <Link to="/" data-testid="navbar-logo" className="flex items-center gap-2.5 group flex-shrink-0">
             <div className="w-10 h-10 bg-[#D4AF37] flex items-center justify-center rounded-sm shadow-lg">
               <span className="font-outfit font-black text-black text-sm leading-none">E3C</span>
             </div>
-            <div>
+            <div className="hidden sm:block">
               <p className="font-outfit font-bold text-white text-sm leading-tight group-hover:text-[#D4AF37] transition-colors">
                 E3C Constructions
               </p>
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest">
-                Guadeloupe · BTP
-              </p>
+              <p className="text-[9px] text-gray-500 uppercase tracking-widest">Guadeloupe · BTP</p>
             </div>
           </Link>
 
-          {/* Right side: phone + hamburger */}
-          <div className="flex items-center gap-4">
-            <a
-              href={`tel:${phone.replace(/\s/g, "")}`}
-              data-testid="navbar-phone"
-              className="hidden sm:flex items-center gap-1.5 text-gray-300 hover:text-[#D4AF37] transition-colors text-sm"
-            >
-              <Phone size={13} />
-              <span>{phone}</span>
-            </a>
+          {/* Right: account icons + hamburger */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            {user ? (
+              /* Logged-in user: avatar + dashboard link */
+              <Link
+                to={user.role === "admin" ? "/admin" : "/espace-client"}
+                data-testid="navbar-user-link"
+                className="flex items-center gap-2 bg-[#D4AF37]/10 border border-[#D4AF37]/20 hover:bg-[#D4AF37]/20 text-[#D4AF37] px-3 py-1.5 rounded-sm transition-colors text-xs font-semibold"
+              >
+                <User size={14} />
+                <span className="hidden sm:inline max-w-[100px] truncate">{user.name.split(" ")[0]}</span>
+              </Link>
+            ) : (
+              /* Not logged in: login + register icons */
+              <>
+                <Link
+                  to="/connexion"
+                  data-testid="navbar-login-icon"
+                  title="Se connecter"
+                  className="flex items-center gap-1.5 text-gray-300 hover:text-[#D4AF37] transition-colors p-2 rounded-sm hover:bg-white/5 text-xs"
+                >
+                  <LogIn size={17} />
+                  <span className="hidden md:inline text-xs font-medium">Connexion</span>
+                </Link>
+                <Link
+                  to="/inscription"
+                  data-testid="navbar-register-icon"
+                  title="Créer un compte"
+                  className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white transition-colors px-2.5 py-1.5 rounded-sm text-xs font-medium"
+                >
+                  <UserPlus size={15} />
+                  <span className="hidden md:inline">Compte</span>
+                </Link>
+              </>
+            )}
 
-            {/* Hamburger — all sizes */}
+            {/* Hamburger */}
             <button
               onClick={() => setOpen(!open)}
               data-testid="navbar-menu-toggle"
               aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
-              className="relative flex flex-col items-center justify-center w-10 h-10 gap-1.5 text-white hover:text-[#D4AF37] transition-colors group"
+              className="ml-1 flex flex-col items-center justify-center w-9 h-9 gap-1.5 text-white hover:text-[#D4AF37] transition-colors rounded-sm hover:bg-white/5"
             >
-              <span className={`block h-0.5 bg-current transition-all duration-300 ${open ? "w-6 rotate-45 translate-y-2" : "w-6"}`} />
-              <span className={`block h-0.5 bg-current transition-all duration-300 ${open ? "opacity-0 w-0" : "w-5"}`} />
-              <span className={`block h-0.5 bg-current transition-all duration-300 ${open ? "w-6 -rotate-45 -translate-y-2" : "w-6"}`} />
+              <span className={`block h-0.5 bg-current transition-all duration-300 ${open ? "w-5 rotate-45 translate-y-2" : "w-5"}`} />
+              <span className={`block h-0.5 bg-current transition-all duration-300 ${open ? "opacity-0 w-0" : "w-4"}`} />
+              <span className={`block h-0.5 bg-current transition-all duration-300 ${open ? "w-5 -rotate-45 -translate-y-2" : "w-5"}`} />
             </button>
           </div>
         </div>
@@ -110,10 +127,7 @@ export default function Navbar({ whatsapp, phone }) {
 
       {/* Overlay */}
       {open && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-          onClick={() => setOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setOpen(false)} />
       )}
 
       {/* Slide-out Drawer */}
@@ -123,20 +137,18 @@ export default function Navbar({ whatsapp, phone }) {
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        {/* Drawer header */}
         <div className="flex items-center justify-between px-6 h-16 md:h-20 border-b border-white/5 flex-shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-[#D4AF37] flex items-center justify-center rounded-sm">
               <span className="font-outfit font-black text-black text-xs">E3C</span>
             </div>
-            <span className="font-outfit font-semibold text-white text-sm">Menu</span>
+            <span className="font-outfit font-semibold text-white text-sm">Navigation</span>
           </div>
           <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-white transition-colors p-1">
             <X size={22} />
           </button>
         </div>
 
-        {/* Drawer nav links */}
         <nav className="flex-1 overflow-y-auto px-4 py-5 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -144,50 +156,19 @@ export default function Navbar({ whatsapp, phone }) {
               <button
                 key={item.label}
                 onClick={item.action}
-                className="w-full flex items-center gap-4 px-4 py-3.5 text-gray-300 hover:text-white hover:bg-white/5 transition-colors rounded-sm text-left group"
+                className={`w-full flex items-center gap-4 px-4 py-3.5 transition-colors rounded-sm text-left group ${
+                  item.highlight
+                    ? "bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] hover:bg-[#D4AF37]/20"
+                    : "text-gray-300 hover:text-white hover:bg-white/5"
+                }`}
               >
-                <Icon size={18} className="text-[#D4AF37] flex-shrink-0 group-hover:scale-110 transition-transform" />
+                <Icon size={18} className={`flex-shrink-0 group-hover:scale-110 transition-transform ${item.highlight ? "text-[#D4AF37]" : "text-[#D4AF37]"}`} />
                 <span className="font-medium text-base">{item.label}</span>
               </button>
             );
           })}
-
-          {/* Divider */}
-          <div className="border-t border-white/5 my-3" />
-
-          {/* Account section */}
-          {user ? (
-            <Link
-              to={user.role === "admin" ? "/admin" : "/espace-client"}
-              className="w-full flex items-center gap-4 px-4 py-3.5 text-gray-300 hover:text-white hover:bg-white/5 transition-colors rounded-sm"
-            >
-              <User size={18} className="text-[#D4AF37] flex-shrink-0" />
-              <div>
-                <p className="font-medium text-base">Mon espace</p>
-                <p className="text-xs text-gray-500">{user.name}</p>
-              </div>
-            </Link>
-          ) : (
-            <>
-              <Link
-                to="/connexion"
-                className="w-full flex items-center gap-4 px-4 py-3.5 text-gray-300 hover:text-white hover:bg-white/5 transition-colors rounded-sm"
-              >
-                <LogIn size={18} className="text-[#D4AF37] flex-shrink-0" />
-                <span className="font-medium text-base">Se connecter</span>
-              </Link>
-              <Link
-                to="/inscription"
-                className="w-full flex items-center gap-4 px-4 py-3.5 text-gray-300 hover:text-white hover:bg-white/5 transition-colors rounded-sm"
-              >
-                <User size={18} className="text-[#D4AF37] flex-shrink-0" />
-                <span className="font-medium text-base">Créer un compte</span>
-              </Link>
-            </>
-          )}
         </nav>
 
-        {/* Drawer footer CTA */}
         <div className="px-4 py-5 border-t border-white/5 space-y-3 flex-shrink-0">
           <a
             href={`https://wa.me/${whatsapp}?text=Bonjour%20E3C%2C%20je%20souhaite%20un%20devis%20gratuit.`}
@@ -200,15 +181,7 @@ export default function Navbar({ whatsapp, phone }) {
             <WHATSAPP_ICON />
             Devis Gratuit WhatsApp
           </a>
-          <a
-            href={`tel:${phone.replace(/\s/g, "")}`}
-            className="w-full flex items-center justify-center gap-2 text-gray-300 hover:text-[#D4AF37] transition-colors text-sm py-2"
-          >
-            <Phone size={14} /> {phone}
-          </a>
-          <p className="text-center text-xs text-gray-600">
-            E3C Constructions · Guadeloupe (971)
-          </p>
+          <p className="text-center text-xs text-gray-600">E3C Constructions · Guadeloupe (971)</p>
         </div>
       </div>
     </>

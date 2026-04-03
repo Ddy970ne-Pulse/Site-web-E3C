@@ -1,29 +1,15 @@
-import { MapPin, Phone, CheckCircle } from "lucide-react";
+import { MapPin, CheckCircle, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const communes = [
-  "Pointe-à-Pitre",
-  "Les Abymes",
-  "Baie-Mahault",
-  "Le Gosier",
-  "Sainte-Anne",
-  "Saint-François",
-  "Capesterre",
-  "Basse-Terre",
-  "Saint-Claude",
-  "Gourbeyre",
-  "Petit-Bourg",
-  "Lamentin",
-  "Morne-à-l'Eau",
-  "Port-Louis",
-  "Anse-Bertrand",
-  "Deshaies",
-  "Bouillante",
-  "Vieux-Habitants",
-  "Trois-Rivières",
-  "Saint-Louis (Marie-Galante)",
+  "Pointe-à-Pitre", "Les Abymes", "Baie-Mahault", "Le Gosier", "Sainte-Anne",
+  "Saint-François", "Capesterre", "Basse-Terre", "Saint-Claude", "Gourbeyre",
+  "Petit-Bourg", "Lamentin", "Morne-à-l'Eau", "Port-Louis", "Anse-Bertrand",
+  "Deshaies", "Bouillante", "Vieux-Habitants", "Trois-Rivières", "Saint-Louis (Marie-Galante)",
 ];
 
-export default function ZoneIntervention({ whatsapp, phone }) {
+export default function ZoneIntervention({ whatsapp }) {
+  const navigate = useNavigate();
   return (
     <section
       id="zone"
@@ -60,38 +46,21 @@ export default function ZoneIntervention({ whatsapp, phone }) {
               votre projet et réaliser vos travaux.
             </p>
 
-            {/* Info cards */}
+            {/* Info cards — no phone */}
             <div className="space-y-4 mb-8">
               {[
-                {
-                  icon: MapPin,
-                  title: "Siège",
-                  value: "Guadeloupe (971)",
-                },
-                {
-                  icon: Phone,
-                  title: "Téléphone / WhatsApp",
-                  value: phone,
-                },
-                {
-                  icon: CheckCircle,
-                  title: "Devis",
-                  value: "Gratuit & sans engagement",
-                },
+                { icon: MapPin, title: "Siège", value: "Guadeloupe (971)" },
+                { icon: CheckCircle, title: "Dévis", value: "Gratuit & sans engagement" },
+                { icon: CheckCircle, title: "Intervention", value: "Grande-Terre & Basse-Terre" },
               ].map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div
-                    key={item.title}
-                    className="flex items-center gap-4 p-4 bg-[#121212] border border-white/5 rounded-sm"
-                  >
+                  <div key={item.title} className="flex items-center gap-4 p-4 bg-[#121212] border border-white/5 rounded-sm">
                     <div className="w-9 h-9 bg-[#D4AF37]/10 flex items-center justify-center rounded-sm flex-shrink-0">
                       <Icon size={16} strokeWidth={1.5} className="text-[#D4AF37]" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">
-                        {item.title}
-                      </p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">{item.title}</p>
                       <p className="text-white font-medium text-sm">{item.value}</p>
                     </div>
                   </div>
@@ -100,22 +69,21 @@ export default function ZoneIntervention({ whatsapp, phone }) {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => navigate("/devis")}
+                data-testid="zone-devis-btn"
+                className="inline-flex items-center justify-center gap-2 bg-[#D4AF37] text-black font-bold px-6 py-3 hover:bg-[#E6C65A] transition-colors text-sm tracking-wide rounded-sm"
+              >
+                Demander un devis <ArrowRight size={14} />
+              </button>
               <a
                 href={`https://wa.me/${whatsapp}?text=Bonjour%20E3C%2C%20je%20souhaite%20v%C3%A9rifier%20votre%20disponibilit%C3%A9%20dans%20ma%20commune.`}
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="zone-whatsapp-btn"
-                className="inline-flex items-center justify-center gap-2 bg-[#D4AF37] text-black font-bold px-6 py-3 hover:bg-[#E6C65A] transition-colors text-sm tracking-wide"
+                className="inline-flex items-center justify-center gap-2 border border-white/20 text-white font-semibold px-6 py-3 hover:border-[#D4AF37]/50 hover:text-[#D4AF37] transition-colors text-sm rounded-sm"
               >
-                V&eacute;rifier ma commune
-              </a>
-              <a
-                href={`tel:${phone.replace(/\s/g, "")}`}
-                data-testid="zone-phone-btn"
-                className="inline-flex items-center justify-center gap-2 border border-white/20 text-white font-semibold px-6 py-3 hover:border-[#D4AF37]/50 hover:text-[#D4AF37] transition-colors text-sm"
-              >
-                <Phone size={14} />
-                Appeler maintenant
+                WhatsApp
               </a>
             </div>
           </div>
