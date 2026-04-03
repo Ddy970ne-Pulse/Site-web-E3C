@@ -32,11 +32,20 @@
 - FAQ accordion (7 questions)
 - Footer complet avec liens compte client (téléphone retiré)
 
+## Ce qui a été implémenté (v5.0 - Avril 2026)
+
 ### Modifications v4.0
 - Icônes "Connexion" et "Créer un compte" déplacées dans le header (hors menu hamburger)
 - Section témoignages clients ajoutée (6 avis, section #testimonials)
-- Numéro de téléphone entièrement supprimé de toutes les pages visibles (Contact, Footer, ContactPage, meta tags)
+- Numéro de téléphone entièrement supprimé de toutes les pages visibles
 - Wizard Devis en 6 étapes : /devis — POST /api/quote-requests
+
+### Modifications v5.0
+- Section Prestations redesignée : grille compacte 3×3 (icône inline + titre + desc, p-5, gap-px)
+- Section Valeurs redesignée : même style compact que Prestations (cohérence visuelle)
+- Zone d'intervention : carte OpenStreetMap interactive (iframe, filtre CSS dark, badge overlay)
+- Admin dashboard enrichi : onglet Analytiques (CA total, CA mensuel, taux de conversion, barres), onglet Demandes wizard
+- Pages légales : /mentions-legales + /cgv + liens dans le footer
 
 ### Page Contact dédiée /contact (v3.0)
 - Hero "Parlons de votre projet"
@@ -86,6 +95,7 @@
 - v2.0: Backend 100% | Frontend 100%
 - v3.0: Backend 100% | Frontend 100%
 - v4.0: Backend 100% | Frontend 100% (iteration_4.json)
+- v5.0: Backend 100% | Frontend 100% (iteration_5.json)
 
 ---
 
@@ -100,10 +110,10 @@
 
 ### P1 — Amélioration
 - [ ] Intégration Brevo emails transactionnels (besoin clé API BREVO_API_KEY)
-- [ ] Google Maps dans zone d'intervention
+- [x] Google Maps dans zone d'intervention — OpenStreetMap v5.0
 - [ ] SEO avancé (sitemap, meta, Open Graph)
-- [ ] Dashboard analytics (CA mensuel, taux conversion)
-- [ ] Mentions légales / CGV / Politique de confidentialité
+- [x] Dashboard analytics (CA mensuel, taux conversion) — v5.0
+- [x] Mentions légales / CGV — v5.0
 
 ### P2 — Évolution
 - [ ] Galerie avec filtres par catégorie
