@@ -96,6 +96,7 @@
 - v3.0: Backend 100% | Frontend 100%
 - v4.0: Backend 100% | Frontend 100% (iteration_4.json)
 - v5.0: Backend 100% | Frontend 100% (iteration_5.json)
+- v6.0: Frontend 100% — 17/17 tests (iteration_6.json)
 
 ---
 
@@ -111,8 +112,8 @@
 ### P1 — Amélioration
 - [ ] Intégration Brevo emails transactionnels (besoin clé API BREVO_API_KEY)
 - [x] Google Maps dans zone d'intervention — OpenStreetMap v5.0
-- [ ] SEO avancé (sitemap, meta, Open Graph)
-- [x] Dashboard analytics (CA mensuel, taux conversion) — v5.0
+- [ ] SEO avancé (sitemap.xml, Open Graph, meta pages) ✅ v6.0
+- [x] Galerie avec filtres par catégorie ✅ v6.0
 - [x] Mentions légales / CGV — v5.0
 
 ### P2 — Évolution
