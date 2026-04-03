@@ -61,9 +61,47 @@ Créer un site web professionnel, moderne et optimisé mobile pour E3C afin d'am
 
 ---
 
-## Résultats des tests (v1.0)
-- Backend: 100% (4/4 tests)
-- Frontend: 95% (tous visuels présents, mobile responsive)
+## Résultats des tests (v1.0 site vitrine)
+- Backend: 100% | Frontend: 95%
+
+## Ce qui a été implémenté (v2.0 - Devis/Factures/Paiements - Février 2026)
+
+### Authentification
+- JWT + bcrypt, rôles admin et client
+- Compte admin auto-seedé au démarrage (admin@e3c-construction.com)
+- Inscription client avec email + mot de passe
+- Cookies httpOnly sécurisés
+
+### Devis (Quotes)
+- Création par l'admin avec lignes de postes (description, qté, prix HT, TVA)
+- Numérotation automatique : DEV-YYYY-NNN
+- Workflow : draft → sent → accepted/refused → converted
+- Envoi au client avec notification email (Brevo, optionnel)
+- Signature client "bon pour accord"
+- Génération PDF (reportlab)
+
+### Factures (Invoices)
+- Conversion automatique depuis devis accepté
+- Numérotation automatique : FAC-YYYY-NNN
+- Définition des tranches de paiement par l'admin (libellé, montant, échéance)
+- Validation du total (sum des tranches = total TTC)
+- Notification client à la création des tranches
+- Génération PDF
+
+### Paiements Stripe
+- Stripe Checkout (mode test avec sk_test_emergent)
+- Paiement tranche par tranche
+- Vérification du statut de paiement
+- Webhook Stripe pour confirmation automatique
+- Suivi des transactions en base
+
+### Espaces personnels
+- Admin (/admin) : Dashboard, Clients, Devis, Factures, Paiements
+- Client (/espace-client) : Mes Devis, Mes Factures avec boutons de paiement
+
+## Résultats des tests (v2.0)
+- Backend: 100% (26/26 tests)
+- Frontend: 100%
 
 ---
 
