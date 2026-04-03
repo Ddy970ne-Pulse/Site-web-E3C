@@ -1,34 +1,196 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+html {
+  scroll-behavior: smooth;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+body {
+  font-family: 'Manrope', sans-serif;
+  background-color: #0A0A0A;
+  color: #FFFFFF;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.App-link {
-    color: #61dafb;
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Fade in up animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(34, 197, 94, 0.4); }
+  50% { box-shadow: 0 0 30px rgba(34, 197, 94, 0.7); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.7s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.7s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Gold shimmer text */
+.gold-text {
+  color: #D4AF37;
+}
+
+.gold-gradient-text {
+  background: linear-gradient(90deg, #D4AF37, #F5D76E, #D4AF37);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Section divider */
+.section-divider {
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #D4AF37, #F5D76E);
+  border-radius: 2px;
+}
+
+/* Glass card */
+.glass-card {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(18, 18, 18, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Service card hover */
+.service-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.service-card:hover {
+  border-color: rgba(212, 175, 55, 0.4);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(212, 175, 55, 0.1);
+}
+
+/* Gallery image hover */
+.gallery-item {
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.gallery-item img {
+  transition: transform 0.5s ease;
+}
+
+.gallery-item:hover img {
+  transform: scale(1.05);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D4AF37;
+  border-radius: 3px;
+}
+
+/* Input focus styles */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #D4AF37 !important;
+  box-shadow: 0 0 0 1px #D4AF37;
+}
+
+/* WhatsApp float button */
+.whatsapp-float {
+  position: fixed;
+  bottom: 80px;
+  right: 24px;
+  z-index: 999;
+}
+
+/* Hero overlay */
+.hero-overlay {
+  background: linear-gradient(
+    135deg,
+    rgba(10, 10, 10, 0.85) 0%,
+    rgba(10, 10, 10, 0.6) 50%,
+    rgba(10, 10, 10, 0.75) 100%
+  );
+}
+
+/* Stat counter */
+.stat-number {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  color: #D4AF37;
+  line-height: 1;
+}
+
+/* Zone tag */
+.zone-tag {
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  color: #D4AF37;
+  transition: all 0.2s ease;
+}
+
+.zone-tag:hover {
+  background: rgba(212, 175, 55, 0.15);
+}
+
+/* Mobile menu */
+.mobile-menu {
+  backdrop-filter: blur(30px);
+  background: rgba(10, 10, 10, 0.95);
 }
