@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, User, LogIn } from "lucide-react";
+import { MapPin, User, LogIn, Scale } from "lucide-react";
 
 const WHATSAPP_SVG = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -139,12 +139,16 @@ export default function Footer({ whatsapp }) {
         {/* Bottom bar */}
         <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
           <span className="font-outfit font-black text-4xl text-white/5 select-none">E3C</span>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <Link to="/mentions-legales" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">Mentions légales</Link>
+            <span className="text-gray-700 text-xs">·</span>
+            <Link to="/cgv" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">CGV</Link>
+            <span className="text-gray-700 text-xs">·</span>
+            <span className="text-gray-600 text-xs">RGPD</span>
+          </div>
           <div className="text-center md:text-right">
             <p className="text-gray-600 text-xs">
               &copy; {new Date().getFullYear()} E3C — Entreprise de Constructions · Guadeloupe (971)
-            </p>
-            <p className="text-gray-700 text-xs mt-0.5">
-              Tous droits réservés · Données RGPD protégées
             </p>
           </div>
         </div>

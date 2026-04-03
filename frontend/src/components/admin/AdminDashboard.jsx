@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Users, FileText, Receipt, CreditCard, Plus, LogOut, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Eye, Send, RefreshCw } from "lucide-react";
+import { Users, FileText, Receipt, CreditCard, Plus, LogOut, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Eye, Send, RefreshCw, TrendingUp, Inbox } from "lucide-react";
 import QuoteForm from "@/components/admin/QuoteForm";
 import InvoiceDetail from "@/components/admin/InvoiceDetail";
 
@@ -45,6 +45,7 @@ export default function AdminDashboard() {
   const [invoices, setInvoices] = useState([]);
   const [clients, setClients] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [quoteRequests, setQuoteRequests] = useState([]);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [editQuote, setEditQuote] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -53,13 +54,14 @@ export default function AdminDashboard() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [q, inv, cl, pay] = await Promise.all([
+      const [q, inv, cl, pay, qr] = await Promise.all([
         ax().get(`${API}/quotes`),
         ax().get(`${API}/invoices`),
         ax().get(`${API}/clients`),
         ax().get(`${API}/payments`),
+        ax().get(`${API}/quote-requests`),
       ]);
-      setQuotes(q.data); setInvoices(inv.data); setClients(cl.data); setPayments(pay.data);
+      setQuotes(q.data); setInvoices(inv.data); setClients(cl.data); setPayments(pay.data); setQuoteRequests(qr.data);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -81,6 +83,8 @@ export default function AdminDashboard() {
 
   const tabs = [
     { id: "dashboard", label: "Tableau de bord", icon: Receipt },
+    { id: "analytics", label: "Analytiques", icon: TrendingUp },
+    { id: "requests", label: "Demandes devis", icon: Inbox },
     { id: "clients", label: "Clients", icon: Users },
     { id: "quotes", label: "Devis", icon: FileText },
     { id: "invoices", label: "Factures", icon: Receipt },
@@ -145,7 +149,7 @@ export default function AdminDashboard() {
               <StatCard icon={FileText} label="Devis total" value={quotes.length} />
               <StatCard icon={CheckCircle} label="Acceptés" value={quotes.filter(q => q.status === "accepted").length} color="text-green-400" />
               <StatCard icon={Receipt} label="Factures" value={invoices.length} />
-              <StatCard icon={CreditCard} label="Paiements" value={`${payments.filter(p => p.payment_status === "paid").length}`} color="text-green-400" />
+              <StatCard icon={CreditCard} label="Paiements encaissés" value={`${payments.filter(p => p.payment_status === "paid").length}`} color="text-green-400" />
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-[#121212] border border-white/5 rounded-sm p-5">
@@ -190,6 +194,159 @@ export default function AdminDashboard() {
                   {invoices.length === 0 && <p className="text-gray-500 text-sm">Aucune facture</p>}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Analytics Tab */}
+        {tab === "analytics" && (() => {
+          const now = new Date();
+          const thisMonth = now.getMonth();
+          const thisYear = now.getFullYear();
+
+          const caTotal = payments.filter(p => p.payment_status === "paid").reduce((s, p) => s + (p.amount || 0), 0);
+          const caMois = payments.filter(p => {
+            if (p.payment_status !== "paid") return false;
+            const d = new Date(p.created_at);
+            return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+          }).reduce((s, p) => s + (p.amount || 0), 0);
+
+          const totalQuotes = quotes.length;
+          const convertedQuotes = quotes.filter(q => ["accepted", "converted"].includes(q.status)).length;
+          const tauxConversion = totalQuotes > 0 ? Math.round((convertedQuotes / totalQuotes) * 100) : 0;
+
+          // CA par mois (6 derniers mois)
+          const months = Array.from({ length: 6 }, (_, i) => {
+            const d = new Date(thisYear, thisMonth - (5 - i), 1);
+            return { label: d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" }), month: d.getMonth(), year: d.getFullYear() };
+          });
+          const monthlyCA = months.map(m => ({
+            ...m,
+            ca: payments.filter(p => {
+              if (p.payment_status !== "paid") return false;
+              const d = new Date(p.created_at);
+              return d.getMonth() === m.month && d.getFullYear() === m.year;
+            }).reduce((s, p) => s + (p.amount || 0), 0),
+          }));
+          const maxCA = Math.max(...monthlyCA.map(m => m.ca), 1);
+
+          return (
+            <div>
+              <h1 className="font-outfit font-bold text-2xl text-white mb-6">Analytiques</h1>
+
+              {/* KPI cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div className="bg-[#121212] border border-white/5 p-5 rounded-sm">
+                  <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">CA Total encaissé</p>
+                  <p className="font-outfit font-bold text-2xl text-[#D4AF37]">{caTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €</p>
+                </div>
+                <div className="bg-[#121212] border border-white/5 p-5 rounded-sm">
+                  <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">CA ce mois</p>
+                  <p className="font-outfit font-bold text-2xl text-green-400">{caMois.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €</p>
+                </div>
+                <div className="bg-[#121212] border border-white/5 p-5 rounded-sm">
+                  <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Taux de conversion</p>
+                  <p className="font-outfit font-bold text-2xl text-blue-400">{tauxConversion}%</p>
+                  <p className="text-xs text-gray-600 mt-1">{convertedQuotes}/{totalQuotes} devis</p>
+                </div>
+                <div className="bg-[#121212] border border-white/5 p-5 rounded-sm">
+                  <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Demandes wizard</p>
+                  <p className="font-outfit font-bold text-2xl text-purple-400">{quoteRequests.length}</p>
+                  <p className="text-xs text-gray-600 mt-1">via formulaire /devis</p>
+                </div>
+              </div>
+
+              <div className="grid lg:grid-cols-2 gap-6">
+                {/* CA mensuel — barres CSS */}
+                <div className="bg-[#121212] border border-white/5 rounded-sm p-5">
+                  <h3 className="font-outfit font-semibold text-white mb-5 text-sm">CA encaissé — 6 derniers mois</h3>
+                  <div className="space-y-3">
+                    {monthlyCA.map(m => (
+                      <div key={`${m.month}-${m.year}`} className="flex items-center gap-3">
+                        <span className="text-xs text-gray-500 w-14 flex-shrink-0 capitalize">{m.label}</span>
+                        <div className="flex-1 bg-white/5 rounded-sm h-5 overflow-hidden">
+                          <div
+                            className="h-full bg-[#D4AF37]/70 rounded-sm transition-all duration-500"
+                            style={{ width: `${maxCA > 0 ? (m.ca / maxCA) * 100 : 0}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-300 w-20 text-right flex-shrink-0">{m.ca.toLocaleString("fr-FR")} €</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Statuts devis */}
+                <div className="bg-[#121212] border border-white/5 rounded-sm p-5">
+                  <h3 className="font-outfit font-semibold text-white mb-5 text-sm">Répartition des devis</h3>
+                  <div className="space-y-3">
+                    {[
+                      { label: "Brouillons", count: quotes.filter(q => q.status === "draft").length, color: "bg-gray-500/60" },
+                      { label: "Envoyés", count: quotes.filter(q => q.status === "sent").length, color: "bg-blue-500/60" },
+                      { label: "Acceptés", count: quotes.filter(q => q.status === "accepted").length, color: "bg-green-500/60" },
+                      { label: "Convertis", count: quotes.filter(q => q.status === "converted").length, color: "bg-purple-500/60" },
+                      { label: "Refusés", count: quotes.filter(q => q.status === "refused").length, color: "bg-red-500/60" },
+                    ].map(s => (
+                      <div key={s.label} className="flex items-center gap-3">
+                        <span className="text-xs text-gray-500 w-20 flex-shrink-0">{s.label}</span>
+                        <div className="flex-1 bg-white/5 rounded-sm h-5 overflow-hidden">
+                          <div
+                            className={`h-full ${s.color} rounded-sm transition-all duration-500`}
+                            style={{ width: `${totalQuotes > 0 ? (s.count / totalQuotes) * 100 : 0}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-300 w-6 text-right flex-shrink-0">{s.count}</span>
+                      </div>
+                    ))}
+                    {totalQuotes === 0 && <p className="text-gray-500 text-sm">Aucun devis</p>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Quote Requests Tab */}
+        {tab === "requests" && (
+          <div>
+            <h1 className="font-outfit font-bold text-2xl text-white mb-6">Demandes de devis via Wizard ({quoteRequests.length})</h1>
+            <div className="space-y-3">
+              {quoteRequests.map((r, i) => (
+                <div key={r.id || i} className="bg-[#121212] border border-white/5 rounded-sm p-5">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <p className="font-outfit font-semibold text-white text-sm">{r.name || "—"}</p>
+                        <span className="text-xs text-gray-500">{r.email}</span>
+                        {r.phone && <span className="text-xs text-gray-500">{r.phone}</span>}
+                      </div>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {r.project_type && <span className="text-xs bg-[#D4AF37]/10 text-[#D4AF37] px-2 py-0.5 rounded-sm">{r.project_type}</span>}
+                        {r.commune && <span className="text-xs bg-white/5 text-gray-300 px-2 py-0.5 rounded-sm">{r.commune}</span>}
+                        {r.budget_range && <span className="text-xs bg-white/5 text-gray-300 px-2 py-0.5 rounded-sm">{r.budget_range}</span>}
+                        {r.desired_delay && <span className="text-xs bg-white/5 text-gray-300 px-2 py-0.5 rounded-sm">{r.desired_delay}</span>}
+                      </div>
+                      {r.services?.length > 0 && (
+                        <p className="text-xs text-gray-400">Prestations : {r.services.join(", ")}</p>
+                      )}
+                      {r.description && (
+                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{r.description}</p>
+                      )}
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs text-gray-500">{new Date(r.created_at).toLocaleDateString("fr-FR")}</p>
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-sm mt-1 inline-block ${r.status === "new" ? "bg-blue-400/10 text-blue-400" : "bg-gray-400/10 text-gray-400"}`}>
+                        {r.status === "new" ? "Nouveau" : r.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {quoteRequests.length === 0 && (
+                <div className="bg-[#121212] border border-white/5 rounded-sm p-12 text-center">
+                  <p className="text-gray-500 text-sm">Aucune demande via le wizard pour le moment</p>
+                </div>
+              )}
             </div>
           </div>
         )}

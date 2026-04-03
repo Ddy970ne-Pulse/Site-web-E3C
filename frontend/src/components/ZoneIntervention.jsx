@@ -113,20 +113,19 @@ export default function ZoneIntervention({ whatsapp }) {
             </p>
 
             {/* Map placeholder */}
-            <div className="mt-8 relative rounded-sm overflow-hidden">
-              <img
-                src="https://images.unsplash.com/photo-1641425387303-2b3c1fb1f3c4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjV8MHwxfHNlYXJjaHwxfHxCVFAlMjBjb25zdHJ1Y3Rpb24lMjByZW5vdmF0aW9uJTIwQ2FyaWJiZWFuJTIwdHJvcGljYWwlMjBidWlsZGluZ3xlbnwwfHx8fDE3NzUyMzE0MjN8MA&ixlib=rb-4.1.0&q=85"
-                alt="Guadeloupe construction"
-                className="w-full h-48 object-cover opacity-60"
+            <div className="mt-8 relative rounded-sm overflow-hidden border border-white/8" style={{ height: "320px" }}>
+              <iframe
+                title="Zone d'intervention E3C — Guadeloupe"
+                src="https://www.openstreetmap.org/export/embed.html?bbox=-62.05%2C15.83%2C-61.05%2C16.60&layer=mapnik&marker=16.18%2C-61.55"
+                className="w-full h-full"
+                style={{ filter: "invert(0.88) hue-rotate(180deg) brightness(0.85) contrast(1.1)", border: 0 }}
+                loading="lazy"
+                allowFullScreen
               />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                <div className="text-center">
-                  <MapPin size={32} className="text-[#D4AF37] mx-auto mb-2" />
-                  <p className="text-white font-outfit font-bold text-lg">
-                    Guadeloupe
-                  </p>
-                  <p className="text-gray-300 text-xs">971 — Antilles françaises</p>
-                </div>
+              {/* Badge overlay */}
+              <div className="absolute top-3 left-3 bg-[#0A0A0A]/90 backdrop-blur-sm border border-[#D4AF37]/30 px-3 py-1.5 rounded-sm flex items-center gap-2 pointer-events-none">
+                <MapPin size={12} className="text-[#D4AF37]" />
+                <span className="text-white text-xs font-semibold">Guadeloupe (971)</span>
               </div>
             </div>
           </div>

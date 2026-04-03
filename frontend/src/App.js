@@ -8,6 +8,8 @@ import AdminDashboard from "@/components/admin/AdminDashboard";
 import ClientDashboard from "@/components/client/ClientDashboard";
 import ContactPage from "@/pages/ContactPage";
 import DevisWizard from "@/pages/DevisWizard";
+import MentionsLegales from "@/pages/MentionsLegales";
+import CGV from "@/pages/CGV";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Services from "@/components/Services";
@@ -54,6 +56,8 @@ function AppRoutes() {
       <Route path="/inscription" element={<><AutoRedirect /><Register /></>} />
       <Route path="/devis" element={<DevisWizard />} />
       <Route path="/contact" element={<ContactPage />} />
+      <Route path="/mentions-legales" element={<MentionsLegales />} />
+      <Route path="/cgv" element={<CGV />} />
       <Route path="/admin" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
       <Route path="/espace-client" element={<ProtectedRoute role="client"><ClientDashboard /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
