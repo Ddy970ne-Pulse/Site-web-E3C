@@ -6,6 +6,7 @@ import Login from "@/components/auth/Login";
 import Register from "@/components/auth/Register";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import ClientDashboard from "@/components/client/ClientDashboard";
+import ContactPage from "@/pages/ContactPage";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Stats from "@/components/Stats";
@@ -57,6 +58,7 @@ function AppRoutes() {
       <Route path="/espace-client" element={
         <ProtectedRoute role="client"><ClientDashboard /></ProtectedRoute>
       } />
+      <Route path="/contact" element={<ContactPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
