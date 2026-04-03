@@ -19,6 +19,8 @@
 
 ## Ce qui a été implémenté (v3.0 - Avril 2026)
 
+## Ce qui a été implémenté (v4.0 - Avril 2026)
+
 ### Site vitrine (v1.0)
 - Navbar hamburger universel (drawer slide-out tous écrans)
 - Hero cinématique + Stats dorées
@@ -26,9 +28,15 @@
 - Valeurs (6 cartes)
 - Galerie photos avec lightbox
 - Zone d'intervention Guadeloupe (20+ communes)
-- Section contact homepage (3 canaux: Tél, WhatsApp, Formulaire)
+- Section contact homepage (2 canaux: WhatsApp, Formulaire — téléphone retiré)
 - FAQ accordion (7 questions)
-- Footer complet avec liens compte client
+- Footer complet avec liens compte client (téléphone retiré)
+
+### Modifications v4.0
+- Icônes "Connexion" et "Créer un compte" déplacées dans le header (hors menu hamburger)
+- Section témoignages clients ajoutée (6 avis, section #testimonials)
+- Numéro de téléphone entièrement supprimé de toutes les pages visibles (Contact, Footer, ContactPage, meta tags)
+- Wizard Devis en 6 étapes : /devis — POST /api/quote-requests
 
 ### Page Contact dédiée /contact (v3.0)
 - Hero "Parlons de votre projet"
@@ -77,6 +85,7 @@
 - v1.0: Backend 100% | Frontend 95%
 - v2.0: Backend 100% | Frontend 100%
 - v3.0: Backend 100% | Frontend 100%
+- v4.0: Backend 100% | Frontend 100% (iteration_4.json)
 
 ---
 
@@ -90,8 +99,8 @@
 - [ ] Compte Brevo → BREVO_API_KEY pour activer les emails
 
 ### P1 — Amélioration
+- [ ] Intégration Brevo emails transactionnels (besoin clé API BREVO_API_KEY)
 - [ ] Google Maps dans zone d'intervention
-- [ ] Section témoignages clients
 - [ ] SEO avancé (sitemap, meta, Open Graph)
 - [ ] Dashboard analytics (CA mensuel, taux conversion)
 - [ ] Mentions légales / CGV / Politique de confidentialité
