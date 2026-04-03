@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Users, FileText, Receipt, CreditCard, Plus, LogOut, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Eye, Send, RefreshCw, TrendingUp, Inbox } from "lucide-react";
+import { Users, FileText, Receipt, CreditCard, Plus, LogOut, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Eye, Send, RefreshCw, TrendingUp, Inbox, Image, MessageSquare, Trash2, Upload } from "lucide-react";
 import QuoteForm from "@/components/admin/QuoteForm";
 import InvoiceDetail from "@/components/admin/InvoiceDetail";
 
@@ -37,6 +37,177 @@ function StatCard({ icon: Icon, label, value, color = "text-[#D4AF37]" }) {
   );
 }
 
+const GALLERY_CATEGORIES = ["Maçonnerie", "Toiture", "Rénovation", "Peinture", "Carrelage"];
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+
+function GalleryTab({ images, onRefresh }) {
+  const [file, setFile] = useState(null);
+  const [label, setLabel] = useState("");
+  const [category, setCategory] = useState("Maçonnerie");
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const handleFile = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    setFile(f);
+    setPreview(URL.createObjectURL(f));
+    if (!label) setLabel(f.name.replace(/\.[^.]+$/, "").replace(/-|_/g, " "));
+  };
+
+  const upload = async e => {
+    e.preventDefault();
+    if (!file || !label.trim()) { setError("Fichier et libellé requis."); return; }
+    setLoading(true); setError(""); setSuccess("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("label", label.trim());
+      fd.append("category", category);
+      await ax().post(`${API}/gallery`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setSuccess("Photo ajoutée avec succès !");
+      setFile(null); setLabel(""); setPreview(null);
+      onRefresh();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Erreur lors de l'upload.");
+    } finally { setLoading(false); }
+  };
+
+  const deleteImg = async id => {
+    if (!window.confirm("Supprimer cette photo ?")) return;
+    try { await ax().delete(`${API}/gallery/${id}`); onRefresh(); }
+    catch { alert("Erreur lors de la suppression."); }
+  };
+
+  return (
+    <div>
+      <h1 className="font-outfit font-bold text-2xl text-white mb-6">Galerie ({images.length} photos admin)</h1>
+
+      {/* Upload form */}
+      <div className="bg-[#121212] border border-white/5 rounded-sm p-6 mb-8">
+        <h3 className="font-outfit font-semibold text-white text-sm mb-4 flex items-center gap-2"><Upload size={14} className="text-[#D4AF37]" /> Ajouter une photo</h3>
+        <form onSubmit={upload} className="space-y-4">
+          {/* Drop zone */}
+          <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 hover:border-[#D4AF37]/30 rounded-sm p-8 cursor-pointer transition-colors group">
+            {preview
+              ? <img src={preview} alt="preview" className="max-h-40 object-contain mb-3 rounded-sm" />
+              : <><Upload size={28} className="text-gray-600 group-hover:text-[#D4AF37]/60 mb-2 transition-colors" /><p className="text-gray-500 text-sm">Cliquer pour choisir une photo (JPEG, PNG, WEBP · max 10 Mo)</p></>
+            }
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} className="hidden" data-testid="gallery-file-input" />
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Libellé *</label>
+              <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Résidence Martin, Rénovation cuisine…"
+                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-4 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="gallery-label-input" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Catégorie *</label>
+              <select value={category} onChange={e => setCategory(e.target.value)}
+                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-4 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="gallery-category-select">
+                {GALLERY_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+          {error && <p className="text-red-400 text-xs">{error}</p>}
+          {success && <p className="text-green-400 text-xs">{success}</p>}
+          <button type="submit" disabled={loading} data-testid="gallery-upload-btn"
+            className="flex items-center gap-2 bg-[#D4AF37] text-black font-bold text-sm px-6 py-2.5 hover:bg-[#E6C65A] transition-colors rounded-sm disabled:opacity-60">
+            {loading ? "Upload…" : <><Upload size={14}/> Publier dans la galerie</>}
+          </button>
+        </form>
+      </div>
+
+      {/* Photo list */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        {images.map(img => (
+          <div key={img.id} className="relative group bg-[#141414] border border-white/5 rounded-sm overflow-hidden">
+            <img src={`${BACKEND_URL}${img.url}`} alt={img.label} className="w-full aspect-video object-cover" loading="lazy" />
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-3">
+              <button onClick={() => deleteImg(img.id)} className="self-end w-7 h-7 bg-red-500/80 hover:bg-red-500 rounded-sm flex items-center justify-center" data-testid={`delete-gallery-${img.id}`}>
+                <Trash2 size={13} className="text-white" />
+              </button>
+              <div>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]">{img.category}</span>
+                <p className="text-white text-xs font-medium leading-snug">{img.label}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+        {images.length === 0 && (
+          <div className="col-span-4 py-12 text-center border border-dashed border-white/10 rounded-sm">
+            <p className="text-gray-500 text-sm">Aucune photo uploadée. Les photos statiques sont toujours visibles dans la galerie publique.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TestimonialsTab({ testimonials, onRefresh }) {
+  const updateStatus = async (id, status) => {
+    try { await ax().patch(`${API}/testimonials/${id}`, { status }); onRefresh(); }
+    catch { alert("Erreur lors de la mise à jour."); }
+  };
+
+  const pending = testimonials.filter(t => t.status === "pending");
+  const approved = testimonials.filter(t => t.status === "approved");
+  const rejected = testimonials.filter(t => t.status === "rejected");
+
+  return (
+    <div>
+      <h1 className="font-outfit font-bold text-2xl text-white mb-2">Témoignages</h1>
+      <div className="flex gap-4 mb-6">
+        <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-sm">{pending.length} en attente</span>
+        <span className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded-sm">{approved.length} publiés</span>
+        <span className="text-xs text-gray-400 bg-gray-400/10 px-2 py-1 rounded-sm">{rejected.length} rejetés</span>
+      </div>
+      <div className="space-y-3">
+        {testimonials.map(t => (
+          <div key={t.id} className={`bg-[#121212] border rounded-sm p-5 ${t.status === "pending" ? "border-yellow-400/20" : t.status === "approved" ? "border-green-500/15" : "border-white/5"}`} data-testid={`testimonial-admin-${t.id}`}>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-1">
+                  <p className="text-white font-semibold text-sm">{t.name}</p>
+                  {t.commune && <span className="text-xs text-gray-500">{t.commune}</span>}
+                  {t.service && <span className="text-xs text-[#D4AF37]/70">{t.service}</span>}
+                  <div className="flex gap-0.5 ml-1">
+                    {Array.from({length:5}).map((_,i) => <span key={i} className={`text-[10px] ${i < t.stars ? "text-[#D4AF37]" : "text-gray-700"}`}>★</span>)}
+                  </div>
+                </div>
+                {t.email && <p className="text-gray-600 text-xs mb-2">{t.email}</p>}
+                <p className="text-gray-300 text-sm leading-relaxed">"{t.text}"</p>
+                <p className="text-gray-600 text-xs mt-2">{new Date(t.created_at).toLocaleDateString("fr-FR")}</p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                {t.status !== "approved" && (
+                  <button onClick={() => updateStatus(t.id, "approved")} data-testid={`approve-${t.id}`}
+                    className="flex items-center gap-1 text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/20 px-3 py-1.5 rounded-sm transition-colors">
+                    <CheckCircle size={12}/> Publier
+                  </button>
+                )}
+                {t.status !== "rejected" && (
+                  <button onClick={() => updateStatus(t.id, "rejected")} data-testid={`reject-${t.id}`}
+                    className="flex items-center gap-1 text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/15 px-3 py-1.5 rounded-sm transition-colors">
+                    <XCircle size={12}/> Rejeter
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+        {testimonials.length === 0 && (
+          <div className="bg-[#121212] border border-white/5 rounded-sm p-12 text-center">
+            <p className="text-gray-500 text-sm">Aucun témoignage reçu pour le moment.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -46,6 +217,8 @@ export default function AdminDashboard() {
   const [clients, setClients] = useState([]);
   const [payments, setPayments] = useState([]);
   const [quoteRequests, setQuoteRequests] = useState([]);
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [testimonials, setTestimonials] = useState([]);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [editQuote, setEditQuote] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -54,14 +227,17 @@ export default function AdminDashboard() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [q, inv, cl, pay, qr] = await Promise.all([
+      const [q, inv, cl, pay, qr, gal, testi] = await Promise.all([
         ax().get(`${API}/quotes`),
         ax().get(`${API}/invoices`),
         ax().get(`${API}/clients`),
         ax().get(`${API}/payments`),
         ax().get(`${API}/quote-requests`),
+        ax().get(`${API}/gallery`),
+        ax().get(`${API}/testimonials/admin`),
       ]);
-      setQuotes(q.data); setInvoices(inv.data); setClients(cl.data); setPayments(pay.data); setQuoteRequests(qr.data);
+      setQuotes(q.data); setInvoices(inv.data); setClients(cl.data); setPayments(pay.data);
+      setQuoteRequests(qr.data); setGalleryImages(gal.data); setTestimonials(testi.data);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -85,6 +261,8 @@ export default function AdminDashboard() {
     { id: "dashboard", label: "Tableau de bord", icon: Receipt },
     { id: "analytics", label: "Analytiques", icon: TrendingUp },
     { id: "requests", label: "Demandes devis", icon: Inbox },
+    { id: "gallery", label: "Galerie", icon: Image },
+    { id: "testimonials", label: "Témoignages", icon: MessageSquare },
     { id: "clients", label: "Clients", icon: Users },
     { id: "quotes", label: "Devis", icon: FileText },
     { id: "invoices", label: "Factures", icon: Receipt },
@@ -349,6 +527,16 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
+        )}
+
+        {/* Gallery Tab */}
+        {tab === "gallery" && (
+          <GalleryTab images={galleryImages} onRefresh={fetchAll} />
+        )}
+
+        {/* Testimonials Tab */}
+        {tab === "testimonials" && (
+          <TestimonialsTab testimonials={testimonials} onRefresh={fetchAll} />
         )}
 
         {/* Clients Tab */}

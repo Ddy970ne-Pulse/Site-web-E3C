@@ -1,11 +1,12 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-import os, logging, uuid, bcrypt, jwt, asyncio, secrets, io
+import os, logging, uuid, bcrypt, jwt, asyncio, secrets, io, shutil
 from pathlib import Path
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional, Dict, Any
@@ -14,6 +15,8 @@ from bson import ObjectId
 
 # ─── Config ────────────────────────────────────────────────────────────────
 ROOT_DIR = Path(__file__).parent
+UPLOADS_DIR = ROOT_DIR / "uploads" / "gallery"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
@@ -189,6 +192,18 @@ class CheckoutRequest(BaseModel):
     invoice_id: str
     tranche_id: str
     origin_url: str
+
+class TestimonialCreate(BaseModel):
+    name: str
+    commune: Optional[str] = ""
+    service: Optional[str] = ""
+    stars: int = 5
+    text: str
+    email: Optional[str] = ""
+
+class GalleryImageMeta(BaseModel):
+    label: str
+    category: str  # Maçonnerie | Toiture | Rénovation | Peinture | Carrelage
 
 # ─── Startup ────────────────────────────────────────────────────────────────
 @app.on_event("startup")
@@ -700,6 +715,100 @@ async def update_quote_request_status(req_id: str, request: Request):
 async def root():
     return {"message": "E3C API v2.0 - Devis & Factures"}
 
+# ─── Gallery ─────────────────────────────────────────────────────────────────
+ALLOWED_IMG = {"image/jpeg", "image/png", "image/webp"}
+MAX_SIZE_MB = 10
+
+@api_router.post("/gallery")
+async def upload_gallery_image(
+    request: Request,
+    file: UploadFile = File(...),
+    label: str = Form(...),
+    category: str = Form(...),
+):
+    await require_admin(request)
+    if file.content_type not in ALLOWED_IMG:
+        raise HTTPException(400, "Format non supporté. JPEG, PNG ou WEBP uniquement.")
+    data = await file.read()
+    if len(data) > MAX_SIZE_MB * 1024 * 1024:
+        raise HTTPException(400, f"Fichier trop volumineux (max {MAX_SIZE_MB} Mo).")
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "jpg"
+    filename = f"{uuid.uuid4()}.{ext}"
+    filepath = UPLOADS_DIR / filename
+    with open(filepath, "wb") as f:
+        f.write(data)
+    doc = {
+        "id": str(uuid.uuid4()),
+        "filename": filename,
+        "url": f"/api/uploads/gallery/{filename}",
+        "label": label,
+        "category": category,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.gallery.insert_one({**doc, "_id": doc["id"]})
+    return doc
+
+@api_router.get("/gallery")
+async def list_gallery():
+    imgs = await db.gallery.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return imgs
+
+@api_router.delete("/gallery/{img_id}")
+async def delete_gallery_image(img_id: str, request: Request):
+    await require_admin(request)
+    img = await db.gallery.find_one({"id": img_id}, {"_id": 0})
+    if not img:
+        raise HTTPException(404, "Image introuvable")
+    try:
+        (UPLOADS_DIR / img["filename"]).unlink(missing_ok=True)
+    except Exception:
+        pass
+    await db.gallery.delete_one({"id": img_id})
+    return {"message": "Image supprimée"}
+
+# ─── Testimonials ─────────────────────────────────────────────────────────────
+@api_router.post("/testimonials")
+async def submit_testimonial(body: TestimonialCreate):
+    if not body.name.strip() or not body.text.strip():
+        raise HTTPException(400, "Nom et témoignage requis.")
+    if body.stars < 1 or body.stars > 5:
+        raise HTTPException(400, "Note entre 1 et 5.")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "name": body.name.strip(),
+        "commune": body.commune.strip(),
+        "service": body.service.strip(),
+        "stars": body.stars,
+        "text": body.text.strip(),
+        "email": body.email.lower().strip() if body.email else "",
+        "status": "pending",
+        "initials": "".join(w[0].upper() for w in body.name.strip().split()[:2]),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.testimonials.insert_one({**doc, "_id": doc["id"]})
+    return {"message": "Témoignage soumis. Il sera publié après validation.", "id": doc["id"]}
+
+@api_router.get("/testimonials")
+async def list_testimonials():
+    docs = await db.testimonials.find({"status": "approved"}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    return docs
+
+@api_router.get("/testimonials/admin")
+async def list_testimonials_admin(request: Request):
+    await require_admin(request)
+    docs = await db.testimonials.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return docs
+
+@api_router.patch("/testimonials/{t_id}")
+async def update_testimonial_status(t_id: str, request: Request):
+    await require_admin(request)
+    body = await request.json()
+    status = body.get("status")
+    if status not in ("approved", "rejected", "pending"):
+        raise HTTPException(400, "Statut invalide")
+    await db.testimonials.update_one({"id": t_id}, {"$set": {"status": status}})
+    return {"message": "Statut mis à jour"}
+
 # ─── PDF Generation ───────────────────────────────────────────────────────────
 def generate_quote_pdf(q: dict) -> bytes:
     from reportlab.lib.pagesizes import A4
@@ -767,7 +876,7 @@ def generate_quote_pdf(q: dict) -> bytes:
         elems.append(Spacer(1, 0.5*cm))
         elems.append(Paragraph(f'<b>Notes :</b> {q["notes"]}', styles["Normal"]))
     elems.append(Spacer(1, 1*cm))
-    elems.append(Paragraph('<font size="8" color="#999999">E3C Entreprise de Constructions · Guadeloupe (971) · 0690 44 97 14</font>', styles["Normal"]))
+    elems.append(Paragraph('<font size="8" color="#999999">E3C Entreprise de Constructions · Guadeloupe (971)</font>', styles["Normal"]))
     doc.build(elems)
     return buf.getvalue()
 
@@ -840,11 +949,12 @@ def generate_invoice_pdf(inv: dict) -> bytes:
             ("FONTSIZE", (0, 0), (-1, -1), 9), ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#dddddd"))]))
         elems.append(trt)
     elems.append(Spacer(1, 1*cm))
-    elems.append(Paragraph('<font size="8" color="#999999">E3C Entreprise de Constructions · Guadeloupe (971) · 0690 44 97 14</font>', styles["Normal"]))
+    elems.append(Paragraph('<font size="8" color="#999999">E3C Entreprise de Constructions · Guadeloupe (971)</font>', styles["Normal"]))
     doc.build(elems)
     return buf.getvalue()
 
 # ─── App config ───────────────────────────────────────────────────────────────
+app.mount("/api/uploads", StaticFiles(directory=str(ROOT_DIR / "uploads")), name="uploads")
 app.include_router(api_router)
 app.add_middleware(CORSMiddleware,
     allow_origins=[FRONTEND_URL, "http://localhost:3000"],

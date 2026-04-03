@@ -1,66 +1,42 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import { X, ZoomIn, Grid3X3 } from "lucide-react";
 
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const FILTERS = ["Tout", "Maçonnerie", "Toiture", "Rénovation", "Peinture", "Carrelage"];
 
-const galleryImages = [
-  {
-    url: "https://images.unsplash.com/photo-1685425355454-9f96c58de679?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjV8MHwxfHNlYXJjaHwyfHxCVFAlMjBjb25zdHJ1Y3Rpb24lMjByZW5vdmF0aW9uJTIwQ2FyaWJiZWFuJTIwdHJvcGljYWwlMjBidWlsZGluZ3xlbnwwfHx8fDE3NzUyMzE0MjN8MA&ixlib=rb-4.1.0&q=85",
-    label: "Fondations béton", tag: "Gros Oeuvre", category: "Maçonnerie",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1747056711958-9d8c3b97b578?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHw0fHxjb25zdHJ1Y3Rpb24lMjB3b3JrZXJzJTIwbWFzb25yeSUyMGJ1aWxkaW5nJTIwdHJvcGljYWx8ZW58MHx8fHwxNzc1MjMxNjEwfDA&ixlib=rb-4.1.0&q=85",
-    label: "Maçonnerie agglo", tag: "Murs porteurs", category: "Maçonnerie",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1767950470198-c9cd97f8ed87?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBtb2Rlcm4lMjBhcmNoaXRlY3R1cmUlMjBuaWdodHxlbnwwfHx8fDE3NzUyMzE0Nzh8MA&ixlib=rb-4.1.0&q=85",
-    label: "Résidence neuve", tag: "Construction", category: "Maçonnerie",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1700490984959-c12d6cc78692?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHwzfHxjb25zdHJ1Y3Rpb24lMjB3b3JrZXJzJTIwbWFzb25yeSUyMGJ1aWxkaW5nJTIwdHJvcGljYWx8ZW58MHx8fHwxNzc1MjMxNjEwfDA&ixlib=rb-4.1.0&q=85",
-    label: "Dalle béton armé", tag: "Structure", category: "Maçonnerie",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1696344185454-caf39e418eec?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwyfHxyb29maW5nJTIwdGlsZXMlMjB0cm9waWNhbCUyMGhvdXNlJTIwY29uc3RydWN0aW9ufGVufDB8fHx8MTc3NTI0MzEzOXww&ixlib=rb-4.1.0&q=85",
-    label: "Couverture tuiles", tag: "Toiture", category: "Toiture",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1673645652350-6a4c31c1c78f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NDh8MHwxfHNlYXJjaHwyfHxyb29maW5nJTIwdGlsZXMlMjBob3VzZSUyMGNvbnN0cnVjdGlvbnxlbnwwfHx8fDE3NzUyMzE2MTB8MA&ixlib=rb-4.1.0&q=85",
-    label: "Charpente & toiture", tag: "Couverture", category: "Toiture",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1772567733034-f483af656d1a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwxfHxpbnRlcmlvciUyMHJlbm92YXRpb24lMjBwYWludGluZyUyMG1vZGVybiUyMGhvbWV8ZW58MHx8fHwxNzc1MjMxNjEwfDA&ixlib=rb-4.1.0&q=85",
-    label: "Rénovation intérieure", tag: "Rénovation", category: "Rénovation",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1648475237029-7f853809ca14?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwzfHxpbnRlcmlvciUyMHJlbm92YXRpb24lMjBwYWludGluZyUyMG1vZGVybiUyMGhvbWV8ZW58MHx8fHwxNzc1MjMxNjEwfDA&ixlib=rb-4.1.0&q=85",
-    label: "Aménagement intérieur", tag: "Intérieur", category: "Rénovation",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1613844044163-1ad2f2d0b152?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHwxfHxleHRlcmlvciUyMGhvdXNlJTIwcGFpbnRpbmclMjBmYWNhZGUlMjByZW5vdmF0aW9ufGVufDB8fHx8MTc3NTI0MzEzOXww&ixlib=rb-4.1.0&q=85",
-    label: "Peinture façade", tag: "Peinture extérieure", category: "Peinture",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1756949313571-cee2d2bb3d9c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHwyfHxjb25zdHJ1Y3Rpb24lMjB3b3JrZXJzJTIwbWFzb25yeSUyMGJ1aWxkaW5nJTIwdHJvcGljYWx8ZW58MHx8fHwxNzc1MjMxNjEwfDA&ixlib=rb-4.1.0&q=85",
-    label: "Finitions peinture", tag: "Enduit & peinture", category: "Peinture",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1560005627-c96e0aeb6eaa?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwyfHxmbG9vciUyMHRpbGUlMjBpbnN0YWxsYXRpb24lMjBjYXJyZWxhZ2UlMjBpbnRlcmlvcnxlbnwwfHx8fDE3NzUyNDMxMzl8MA&ixlib=rb-4.1.0&q=85",
-    label: "Carrelage décoratif", tag: "Revêtement sol", category: "Carrelage",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1568545895426-ce552802b55f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwxfHxmbG9vciUyMHRpbGUlMjBpbnN0YWxsYXRpb24lMjBjYXJyZWxhZ2UlMjBpbnRlcmlvcnxlbnwwfHx8fDE3NzUyNDMxMzl8MA&ixlib=rb-4.1.0&q=85",
-    label: "Carrelage intérieur", tag: "Faïence & pose", category: "Carrelage",
-  },
+// Images statiques (fallback et base de la galerie)
+const STATIC_IMAGES = [
+  { id: "s1", url: "https://images.unsplash.com/photo-1685425355454-9f96c58de679?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjV8MHwxfHNlYXJjaHwyfHxCVFAlMjBjb25zdHJ1Y3Rpb24lMjByZW5vdmF0aW9uJTIwQ2FyaWJiZWFuJTIwdHJvcGljYWwlMjBidWlsZGluZ3xlbnwwfHx8fDE3NzUyMzE0MjN8MA&ixlib=rb-4.1.0&q=85", label: "Fondations béton", tag: "Gros Oeuvre", category: "Maçonnerie" },
+  { id: "s2", url: "https://images.unsplash.com/photo-1747056711958-9d8c3b97b578?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHw0fHxjb25zdHJ1Y3Rpb24lMjB3b3JrZXJzJTIwbWFzb25yeSUyMGJ1aWxkaW5nJTIwdHJvcGljYWx8ZW58MHx8fHwxNzc1MjMxNjEwfDA&ixlib=rb-4.1.0&q=85", label: "Maçonnerie agglo", tag: "Murs porteurs", category: "Maçonnerie" },
+  { id: "s3", url: "https://images.unsplash.com/photo-1767950470198-c9cd97f8ed87?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBtb2Rlcm4lMjBhcmNoaXRlY3R1cmUlMjBuaWdodHxlbnwwfHx8fDE3NzUyMzE0Nzh8MA&ixlib=rb-4.1.0&q=85", label: "Résidence neuve", tag: "Construction", category: "Maçonnerie" },
+  { id: "s4", url: "https://images.unsplash.com/photo-1700490984959-c12d6cc78692?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHwzfHxjb25zdHJ1Y3Rpb24lMjB3b3JrZXJzJTIwbWFzb25yeSUyMGJ1aWxkaW5nJTIwdHJvcGljYWx8ZW58MHx8fHwxNzc1MjMxNjEwfDA&ixlib=rb-4.1.0&q=85", label: "Dalle béton armé", tag: "Structure", category: "Maçonnerie" },
+  { id: "s5", url: "https://images.unsplash.com/photo-1696344185454-caf39e418eec?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwyfHxyb29maW5nJTIwdGlsZXMlMjB0cm9waWNhbCUyMGhvdXNlJTIwY29uc3RydWN0aW9ufGVufDB8fHx8MTc3NTI0MzEzOXww&ixlib=rb-4.1.0&q=85", label: "Couverture tuiles", tag: "Toiture", category: "Toiture" },
+  { id: "s6", url: "https://images.unsplash.com/photo-1673645652350-6a4c31c1c78f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NDh8MHwxfHNlYXJjaHwyfHxyb29maW5nJTIwdGlsZXMlMjBob3VzZSUyMGNvbnN0cnVjdGlvbnxlbnwwfHx8fDE3NzUyMzE2MTB8MA&ixlib=rb-4.1.0&q=85", label: "Charpente & toiture", tag: "Couverture", category: "Toiture" },
+  { id: "s7", url: "https://images.unsplash.com/photo-1772567733034-f483af656d1a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwxfHxpbnRlcmlvciUyMHJlbm92YXRpb24lMjBwYWludGluZyUyMG1vZGVybiUyMGhvbWV8ZW58MHx8fHwxNzc1MjMxNjEwfDA&ixlib=rb-4.1.0&q=85", label: "Rénovation intérieure", tag: "Rénovation", category: "Rénovation" },
+  { id: "s8", url: "https://images.unsplash.com/photo-1648475237029-7f853809ca14?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwzfHxpbnRlcmlvciUyMHJlbm92YXRpb24lMjBwYWludGluZyUyMG1vZGVybiUyMGhvbWV8ZW58MHx8fHwxNzc1MjMxNjEwfDA&ixlib=rb-4.1.0&q=85", label: "Aménagement intérieur", tag: "Intérieur", category: "Rénovation" },
+  { id: "s9", url: "https://images.unsplash.com/photo-1613844044163-1ad2f2d0b152?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHwxfHxleHRlcmlvciUyMGhvdXNlJTIwcGFpbnRpbmclMjBmYWNhZGUlMjByZW5vdmF0aW9ufGVufDB8fHx8MTc3NTI0MzEzOXww&ixlib=rb-4.1.0&q=85", label: "Peinture façade", tag: "Peinture extérieure", category: "Peinture" },
+  { id: "s10", url: "https://images.unsplash.com/photo-1756949313571-cee2d2bb3d9c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHwyfHxjb25zdHJ1Y3Rpb24lMjB3b3JrZXJzJTIwbWFzb25yeSUyMGJ1aWxkaW5nJTIwdHJvcGljYWx8ZW58MHx8fHwxNzc1MjMxNjEwfDA&ixlib=rb-4.1.0&q=85", label: "Finitions peinture", tag: "Enduit & peinture", category: "Peinture" },
+  { id: "s11", url: "https://images.unsplash.com/photo-1560005627-c96e0aeb6eaa?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwyfHxmbG9vciUyMHRpbGUlMjBpbnN0YWxsYXRpb24lMjBjYXJyZWxhZ2UlMjBpbnRlcmlvcnxlbnwwfHx8fDE3NzUyNDMxMzl8MA&ixlib=rb-4.1.0&q=85", label: "Carrelage décoratif", tag: "Revêtement sol", category: "Carrelage" },
+  { id: "s12", url: "https://images.unsplash.com/photo-1568545895426-ce552802b55f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwxfHxmbG9vciUyMHRpbGUlMjBpbnN0YWxsYXRpb24lMjBjYXJyZWxhZ2UlMjBpbnRlcmlvcnxlbnwwfHx8fDE3NzUyNDMxMzl8MA&ixlib=rb-4.1.0&q=85", label: "Carrelage intérieur", tag: "Faïence & pose", category: "Carrelage" },
 ];
 
 export default function Gallery() {
   const [activeFilter, setActiveFilter] = useState("Tout");
   const [lightbox, setLightbox] = useState(null);
+  const [apiImages, setApiImages] = useState([]);
 
+  useEffect(() => {
+    axios.get(`${API}/gallery`)
+      .then(r => setApiImages(r.data))
+      .catch(() => setApiImages([]));
+  }, []);
+
+  // Les images admin (API) s'affichent EN PREMIER, puis les statiques
+  const allImages = [...apiImages, ...STATIC_IMAGES];
   const filtered = activeFilter === "Tout"
-    ? galleryImages
-    : galleryImages.filter(img => img.category === activeFilter);
+    ? allImages
+    : allImages.filter(img => img.category === activeFilter);
 
   return (
     <section id="gallery" data-testid="gallery-section" className="py-16 md:py-24 bg-[#0A0A0A]">
