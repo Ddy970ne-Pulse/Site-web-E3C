@@ -91,11 +91,10 @@ export default function ContactPage() {
     try {
       await axios.post(`${API}/contact`, {
         name: form.name,
-        phone: form.phone || form.email,
-        commune: form.commune,
+        phone: form.phone || "—",
+        commune: form.commune || "—",
         service: form.service || form.subject,
-        message: `[${form.subject}] ${form.message}`,
-        email: form.email,
+        message: `[${form.subject}] Email: ${form.email} | ${form.message}`,
       });
       setStatus("success");
       if (sendViaWhatsApp) {
