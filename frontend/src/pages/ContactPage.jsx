@@ -155,7 +155,7 @@ export default function ContactPage() {
           <div className="lg:col-span-2 space-y-6">
             <div>
               <h2 className="font-outfit font-bold text-2xl text-white mb-2">
-                E3C Constructions
+                E3C — Entreprise de constructions
               </h2>
               <div className="section-divider mb-4" />
               <p className="text-gray-400 text-sm leading-relaxed">

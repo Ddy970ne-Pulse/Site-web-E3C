@@ -37,7 +37,7 @@ export default function Footer({ whatsapp }) {
               </div>
               <div>
                 <p className="font-outfit font-bold text-white text-base group-hover:text-[#D4AF37] transition-colors">
-                  E3C Constructions
+                  E3C — Entreprise de constructions
                 </p>
                 <p className="text-xs text-gray-500 uppercase tracking-widest">Guadeloupe · BTP</p>
               </div>

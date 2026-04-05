@@ -33,7 +33,7 @@ export default function Login() {
             <div className="w-12 h-12 bg-[#D4AF37] flex items-center justify-center">
               <span className="font-outfit font-black text-black text-sm">E3C</span>
             </div>
-            <span className="font-outfit font-bold text-white text-xl">E3C Constructions</span>
+            <span className="font-outfit font-bold text-white text-xl">E3C — Entreprise de constructions</span>
           </Link>
           <h1 className="font-outfit font-bold text-2xl text-white">Connexion</h1>
           <p className="text-gray-400 text-sm mt-1">Accédez à votre espace personnel</p>

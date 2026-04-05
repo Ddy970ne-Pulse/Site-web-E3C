@@ -132,7 +132,7 @@ export default function ClientDashboard() {
         {/* Welcome */}
         <div className="mb-6">
           <h1 className="font-outfit font-bold text-xl text-white">Bonjour, {user?.name} 👋</h1>
-          <p className="text-gray-400 text-sm mt-1">Gérez vos devis et factures E3C Constructions</p>
+          <p className="text-gray-400 text-sm mt-1">Gérez vos devis et factures E3C — Entreprise de constructions</p>
         </div>
 
         {/* Payment notification */}
