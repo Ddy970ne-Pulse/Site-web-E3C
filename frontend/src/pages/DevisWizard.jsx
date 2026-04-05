@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,7 +49,7 @@ const COMMUNES = [
   "Saint-Louis (Marie-Galante)", "Autre commune",
 ];
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 
 function StepIndicator({ current, total }) {
   return (
@@ -80,6 +80,12 @@ export default function DevisWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [pricingItems, setPricingItems] = useState([]);
+  const [lineItems, setLineItems] = useState([]); // { pricing_item_id, description, unit, unit_price_ht, tva_rate, quantity }
+
+  useEffect(() => {
+    axios.get(`${API}/pricing-grid`).then(r => setPricingItems(r.data.filter(i => i.active))).catch(() => {});
+  }, []);
 
   const [data, setData] = useState({
     project_type: "",
@@ -103,13 +109,42 @@ export default function DevisWizard() {
     }));
   };
 
+  // Line items helpers
+  const setQty = (itemId, qty) => {
+    const num = parseFloat(qty) || 0;
+    if (num <= 0) {
+      setLineItems(li => li.filter(l => l.pricing_item_id !== itemId));
+    } else {
+      setLineItems(li => {
+        const existing = li.find(l => l.pricing_item_id === itemId);
+        if (existing) return li.map(l => l.pricing_item_id === itemId ? { ...l, quantity: num } : l);
+        const p = pricingItems.find(p => p.id === itemId);
+        if (!p) return li;
+        return [...li, { pricing_item_id: p.id, description: p.description, unit: p.unit, unit_price_ht: p.unit_price_ht, tva_rate: p.tva_rate, quantity: num }];
+      });
+    }
+  };
+  const getQty = (itemId) => lineItems.find(l => l.pricing_item_id === itemId)?.quantity || "";
+  const totalHT = lineItems.reduce((s, l) => s + l.unit_price_ht * l.quantity, 0);
+  const totalTVA = lineItems.reduce((s, l) => s + l.unit_price_ht * l.quantity * (l.tva_rate / 100), 0);
+  const totalTTC = totalHT + totalTVA;
+
+  // Pricing items filtered by selected services (fuzzy match on category)
+  const serviceCategories = data.services.map(s => {
+    const map = { "maçonnerie": "Maçonnerie", "charpente": "Charpente", "toiture": "Toiture", "carrelage": "Carrelage", "renovation": "Rénovation", "peinture": "Peinture", "terrassement": "Terrassement", "plomberie": "Plomberie", "electricite": "Électricité" };
+    return map[s] || "";
+  }).filter(Boolean);
+  const relevantItems = pricingItems.filter(p => serviceCategories.includes(p.category));
+  const otherItems = pricingItems.filter(p => !serviceCategories.includes(p.category));
+
   const canNext = () => {
     if (step === 0) return !!data.project_type;
     if (step === 1) return data.services.length > 0;
-    if (step === 2) return data.description.trim().length > 10;
-    if (step === 3) return !!data.commune;
-    if (step === 4) return true;
-    if (step === 5) return data.name.trim() && data.email.trim();
+    if (step === 2) return true; // estimation — toujours optionnelle
+    if (step === 3) return data.description.trim().length > 10;
+    if (step === 4) return !!data.commune;
+    if (step === 5) return true;
+    if (step === 6) return data.name.trim() && data.email.trim();
     return true;
   };
 
@@ -120,6 +155,9 @@ export default function DevisWizard() {
         ...data,
         services: data.services.map(id => SERVICES_LIST.find(s => s.id === id)?.label || id),
         project_type: PROJECT_TYPES.find(p => p.id === data.project_type)?.label || data.project_type,
+        line_items: lineItems,
+        estimated_total_ht: totalHT,
+        estimated_total_ttc: totalTTC,
       };
       await axios.post(`${API}/quote-requests`, payload);
       setSubmitted(true);
@@ -240,8 +278,112 @@ export default function DevisWizard() {
             </div>
           )}
 
-          {/* Step 2 — Description */}
+          {/* Step 2 — Estimation tarifaire */}
           {step === 2 && (
+            <div>
+              <h2 className="font-outfit font-bold text-white text-xl mb-1">Estimation tarifaire</h2>
+              <p className="text-gray-400 text-sm mb-1">
+                Sélectionnez des articles et saisissez les quantités pour obtenir une estimation immédiate.
+              </p>
+              <p className="text-[#D4AF37] text-xs mb-6">Cette étape est facultative — vous pouvez passer directement à la suite.</p>
+
+              {pricingItems.length === 0 ? (
+                <div className="border border-dashed border-white/10 rounded-sm p-8 text-center">
+                  <p className="text-gray-500 text-sm">La grille tarifaire n'est pas encore disponible.</p>
+                  <p className="text-gray-600 text-xs mt-1">Passez à l'étape suivante pour soumettre votre demande.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Articles correspondants aux prestations sélectionnées */}
+                  {relevantItems.length > 0 && (
+                    <div>
+                      <p className="text-xs text-[#D4AF37] font-semibold uppercase tracking-widest mb-3">Prestations sélectionnées</p>
+                      <div className="space-y-2">
+                        {relevantItems.map(item => {
+                          const qty = getQty(item.id);
+                          const lineTotal = qty ? item.unit_price_ht * parseFloat(qty) : 0;
+                          return (
+                            <div key={item.id} className={`flex items-center gap-3 p-3 border rounded-sm transition-colors ${qty ? "border-[#D4AF37]/30 bg-[#D4AF37]/5" : "border-white/5 bg-white/2"}`}>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white text-sm font-medium leading-snug">{item.description}</p>
+                                <p className="text-gray-500 text-xs">{item.unit_price_ht.toFixed(2)} € HT / {item.unit} · TVA {item.tva_rate}%</p>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <input
+                                  type="number" min="0" step="0.1"
+                                  value={qty}
+                                  onChange={e => setQty(item.id, e.target.value)}
+                                  placeholder="0"
+                                  data-testid={`qty-${item.id}`}
+                                  className="w-20 bg-[#0A0A0A] border border-white/15 text-white text-sm px-2 py-1.5 rounded-sm text-right focus:outline-none focus:border-[#D4AF37]/50"
+                                />
+                                <span className="text-gray-500 text-xs w-8">{item.unit}</span>
+                                {qty > 0 && <span className="text-[#D4AF37] text-xs font-semibold w-20 text-right">{lineTotal.toFixed(2)} €</span>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Autres articles */}
+                  {otherItems.length > 0 && (
+                    <details className="group">
+                      <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-300 transition-colors list-none flex items-center gap-2">
+                        <ChevronRight size={12} className="group-open:rotate-90 transition-transform" />
+                        Autres prestations disponibles ({otherItems.length})
+                      </summary>
+                      <div className="mt-3 space-y-2">
+                        {otherItems.map(item => {
+                          const qty = getQty(item.id);
+                          const lineTotal = qty ? item.unit_price_ht * parseFloat(qty) : 0;
+                          return (
+                            <div key={item.id} className={`flex items-center gap-3 p-3 border rounded-sm transition-colors ${qty ? "border-[#D4AF37]/30 bg-[#D4AF37]/5" : "border-white/5 bg-white/2"}`}>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-gray-300 text-sm">{item.description}</p>
+                                <p className="text-gray-500 text-xs">{item.category} · {item.unit_price_ht.toFixed(2)} € HT / {item.unit}</p>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <input type="number" min="0" step="0.1" value={qty} onChange={e => setQty(item.id, e.target.value)}
+                                  placeholder="0" className="w-20 bg-[#0A0A0A] border border-white/15 text-white text-sm px-2 py-1.5 rounded-sm text-right focus:outline-none focus:border-[#D4AF37]/50" />
+                                <span className="text-gray-500 text-xs w-8">{item.unit}</span>
+                                {qty > 0 && <span className="text-[#D4AF37] text-xs font-semibold w-20 text-right">{lineTotal.toFixed(2)} €</span>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </details>
+                  )}
+
+                  {/* Récapitulatif */}
+                  {lineItems.length > 0 && (
+                    <div className="bg-[#0D0D0D] border border-[#D4AF37]/20 rounded-sm p-4">
+                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-3 font-semibold">Récapitulatif estimation</p>
+                      <div className="space-y-1 text-sm mb-3">
+                        {lineItems.map(l => (
+                          <div key={l.pricing_item_id} className="flex justify-between">
+                            <span className="text-gray-400">{l.description} × {l.quantity} {l.unit}</span>
+                            <span className="text-gray-300">{(l.unit_price_ht * l.quantity).toFixed(2)} €</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="border-t border-white/5 pt-3 space-y-1">
+                        <div className="flex justify-between text-sm"><span className="text-gray-500">Total HT</span><span className="text-gray-300">{totalHT.toFixed(2)} €</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-gray-500">TVA</span><span className="text-gray-300">{totalTVA.toFixed(2)} €</span></div>
+                        <div className="flex justify-between text-base font-bold"><span className="text-white">Total TTC estimé</span><span className="text-[#D4AF37]">{totalTTC.toFixed(2)} €</span></div>
+                      </div>
+                      <p className="text-gray-600 text-xs mt-3">* Estimation indicative, non contractuelle. Le devis définitif sera établi après visite.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 3 — Description */}
+          {step === 3 && (
             <div>
               <h2 className="font-outfit font-bold text-white text-xl mb-1">Décrivez votre projet</h2>
               <p className="text-gray-400 text-sm mb-6">Plus vous êtes précis, plus notre devis sera adapté</p>
@@ -268,33 +410,8 @@ export default function DevisWizard() {
             </div>
           )}
 
-          {/* Step 3 — Localisation */}
-          {step === 3 && (
-            <div>
-              <h2 className="font-outfit font-bold text-white text-xl mb-1">Localisation des travaux</h2>
-              <p className="text-gray-400 text-sm mb-6">Pour que nous puissions planifier notre intervention</p>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs text-gray-400 uppercase tracking-wider mb-2">Commune *</label>
-                  <select value={data.commune} onChange={e => set("commune", e.target.value)}
-                    data-testid="wizard-commune"
-                    className="w-full bg-[#1A1A1A] border border-white/10 text-white px-4 py-3 text-sm rounded-sm">
-                    <option value="">Sélectionnez votre commune</option>
-                    {COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 uppercase tracking-wider mb-2">Adresse précise (optionnel)</label>
-                  <input type="text" value={data.address} onChange={e => set("address", e.target.value)}
-                    placeholder="Rue, quartier, lieu-dit..." data-testid="wizard-address"
-                    className="w-full bg-white/5 border border-white/10 text-white placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4 — Budget & Délai */}
-          {step === 4 && (
+          {/* Step 5 — Budget & Délai */}
+          {step === 5 && (
             <div>
               <h2 className="font-outfit font-bold text-white text-xl mb-1">Budget & Délai souhaités</h2>
               <p className="text-gray-400 text-sm mb-6">Ces informations sont indicatives et sans engagement</p>
@@ -330,8 +447,8 @@ export default function DevisWizard() {
             </div>
           )}
 
-          {/* Step 5 — Coordonnées */}
-          {step === 5 && (
+          {/* Step 6 — Coordonnées */}
+          {step === 6 && (
             <div>
               <h2 className="font-outfit font-bold text-white text-xl mb-1">Vos coordonnées</h2>
               <p className="text-gray-400 text-sm mb-6">Pour vous envoyer votre devis personnalisé</p>

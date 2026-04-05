@@ -175,6 +175,14 @@ class ContactForm(BaseModel):
     service: str
     message: Optional[str] = ""
 
+class QuoteLineItem(BaseModel):
+    pricing_item_id: Optional[str] = ""
+    description: str
+    unit: str
+    unit_price_ht: float
+    tva_rate: float = 8.5
+    quantity: float
+
 class QuoteRequestCreate(BaseModel):
     project_type: str
     services: List[str]
@@ -187,6 +195,9 @@ class QuoteRequestCreate(BaseModel):
     name: str
     email: str
     phone: Optional[str] = ""
+    line_items: Optional[List[QuoteLineItem]] = []
+    estimated_total_ht: Optional[float] = 0.0
+    estimated_total_ttc: Optional[float] = 0.0
 
 class CheckoutRequest(BaseModel):
     invoice_id: str
@@ -204,6 +215,22 @@ class TestimonialCreate(BaseModel):
 class GalleryImageMeta(BaseModel):
     label: str
     category: str  # Maçonnerie | Toiture | Rénovation | Peinture | Carrelage
+
+class PricingItemCreate(BaseModel):
+    category: str
+    description: str
+    unit: str           # m², ml, m³, pièce, heure, forfait, jour
+    unit_price_ht: float
+    tva_rate: float = 8.5
+    active: bool = True
+
+class PricingItemUpdate(BaseModel):
+    category: Optional[str] = None
+    description: Optional[str] = None
+    unit: Optional[str] = None
+    unit_price_ht: Optional[float] = None
+    tva_rate: Optional[float] = None
+    active: Optional[bool] = None
 
 # ─── Startup ────────────────────────────────────────────────────────────────
 @app.on_event("startup")
@@ -679,6 +706,9 @@ async def create_quote_request(body: QuoteRequestCreate, request: Request):
         "email": body.email.lower(),
         "phone": body.phone,
         "client_id": existing_user["id"] if existing_user else None,
+        "line_items": [li.dict() for li in (body.line_items or [])],
+        "estimated_total_ht": round(body.estimated_total_ht or 0, 2),
+        "estimated_total_ttc": round(body.estimated_total_ttc or 0, 2),
         "status": "new",
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -694,6 +724,7 @@ async def create_quote_request(body: QuoteRequestCreate, request: Request):
       <p><b>Commune :</b> {body.commune}</p>
       <p><b>Budget :</b> {body.budget_range or 'Non précisé'}</p>
       <p><b>Délai :</b> {body.desired_delay or 'Non précisé'}</p>
+      {'<p><b>Estimation client :</b> ' + f"{body.estimated_total_ttc:.2f} € TTC</p>" if body.estimated_total_ttc else ''}
     </div></div>"""
     await send_email(ADMIN_EMAIL, f"Nouvelle demande de devis — {body.name}", html)
     return doc
@@ -808,6 +839,52 @@ async def update_testimonial_status(t_id: str, request: Request):
         raise HTTPException(400, "Statut invalide")
     await db.testimonials.update_one({"id": t_id}, {"$set": {"status": status}})
     return {"message": "Statut mis à jour"}
+
+# ─── Pricing Grid ──────────────────────────────────────────────────────────────
+@api_router.get("/pricing-grid")
+async def list_pricing():
+    items = await db.pricing_grid.find({}, {"_id": 0}).sort([("category", 1), ("description", 1)]).to_list(500)
+    return items
+
+@api_router.post("/pricing-grid")
+async def create_pricing_item(body: PricingItemCreate, request: Request):
+    await require_admin(request)
+    if body.unit_price_ht < 0:
+        raise HTTPException(400, "Le prix doit être positif.")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "category": body.category.strip(),
+        "description": body.description.strip(),
+        "unit": body.unit.strip(),
+        "unit_price_ht": round(body.unit_price_ht, 2),
+        "tva_rate": body.tva_rate,
+        "active": body.active,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.pricing_grid.insert_one({**doc, "_id": doc["id"]})
+    return doc
+
+@api_router.put("/pricing-grid/{item_id}")
+async def update_pricing_item(item_id: str, body: PricingItemUpdate, request: Request):
+    await require_admin(request)
+    update = {k: v for k, v in body.dict().items() if v is not None}
+    if "unit_price_ht" in update:
+        update["unit_price_ht"] = round(update["unit_price_ht"], 2)
+    if not update:
+        raise HTTPException(400, "Aucun champ à mettre à jour")
+    await db.pricing_grid.update_one({"id": item_id}, {"$set": update})
+    item = await db.pricing_grid.find_one({"id": item_id}, {"_id": 0})
+    if not item:
+        raise HTTPException(404, "Article introuvable")
+    return item
+
+@api_router.delete("/pricing-grid/{item_id}")
+async def delete_pricing_item(item_id: str, request: Request):
+    await require_admin(request)
+    result = await db.pricing_grid.delete_one({"id": item_id})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Article introuvable")
+    return {"message": "Article supprimé"}
 
 # ─── PDF Generation ───────────────────────────────────────────────────────────
 def generate_quote_pdf(q: dict) -> bytes:
