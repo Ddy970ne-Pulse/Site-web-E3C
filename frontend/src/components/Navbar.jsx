@@ -68,7 +68,7 @@ export default function Navbar({ whatsapp }) {
             </div>
             <div className="hidden sm:block">
               <p className="font-outfit font-bold text-white text-sm leading-tight group-hover:text-[#D4AF37] transition-colors">
-                E3C Constructions
+                E3C — Entreprise de constructions
               </p>
               <p className="text-[9px] text-gray-500 uppercase tracking-widest">Guadeloupe · BTP</p>
             </div>
@@ -181,7 +181,7 @@ export default function Navbar({ whatsapp }) {
             <WHATSAPP_ICON />
             Devis Gratuit WhatsApp
           </a>
-          <p className="text-center text-xs text-gray-600">E3C Constructions · Guadeloupe (971)</p>
+          <p className="text-center text-xs text-gray-600">E3C — Entreprise de constructions · Guadeloupe (971)</p>
         </div>
       </div>
     </>
