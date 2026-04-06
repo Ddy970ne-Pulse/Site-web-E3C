@@ -59,8 +59,15 @@ async def lifespan(application: FastAPI):
     _pdf_executor.shutdown(wait=False)
 
 
-app = FastAPI(title="E3C API", lifespan=lifespan)
-api_router = APIRouter(prefix="/api")
+API_VERSION = "1.0.0"
+
+app = FastAPI(
+    title="E3C API",
+    version=API_VERSION,
+    description="API REST pour E3C — Entreprise de Constructions, Guadeloupe.",
+    lifespan=lifespan,
+)
+api_router = APIRouter(prefix="/api/v1")
 
 # ─── Rate limiter (en mémoire, sans dépendance externe) ────────────────────
 _rate_buckets: Dict[str, collections.deque] = collections.defaultdict(collections.deque)
@@ -934,6 +941,12 @@ async def delete_pricing_item(item_id: str, request: Request):
     return {"message": "Article supprimé"}
 
 # ─── App config ───────────────────────────────────────────────────────────────
+
+@app.get("/api/version", tags=["meta"])
+async def get_version():
+    """Retourne la version de l'API (non versionnée, toujours stable)."""
+    return {"version": API_VERSION, "api": "/api/v1"}
+
 app.mount("/api/uploads", StaticFiles(directory=str(ROOT_DIR / "uploads")), name="uploads")
 app.include_router(api_router)
 app.add_middleware(CORSMiddleware,
