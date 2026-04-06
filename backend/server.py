@@ -1,17 +1,20 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-import os, logging, uuid, bcrypt, jwt, asyncio, secrets, io, shutil
+import os, logging, uuid, bcrypt, jwt, asyncio, secrets, io, shutil, time, collections
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta, date
 from bson import ObjectId
+from services.pdf import generate_quote_pdf, generate_invoice_pdf
 
 # ─── Config ────────────────────────────────────────────────────────────────
 ROOT_DIR = Path(__file__).parent
@@ -23,7 +26,11 @@ db = client[os.environ["DB_NAME"]]
 JWT_SECRET = os.environ["JWT_SECRET"]
 JWT_ALGORITHM = "HS256"
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@e3c-construction.com")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "E3C@Admin2026")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")  # Requis en production
+if not ADMIN_PASSWORD:
+    import warnings
+    warnings.warn("ADMIN_PASSWORD non défini — utilisez une variable d'environnement sécurisée", RuntimeWarning)
+    ADMIN_PASSWORD = "changeme_set_ADMIN_PASSWORD_env"
 STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "sk_test_emergent")
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "noreply@e3c-construction.com")
@@ -32,8 +39,52 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="E3C API")
+# Thread pool dédié à la génération PDF (CPU-bound)
+_pdf_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="pdf")
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """Remplace les @app.on_event startup/shutdown (deprecated depuis FastAPI 0.93)."""
+    await db.users.create_index("email", unique=True)
+    await db.users.create_index("id")
+    await db.quotes.create_index("id")
+    await db.quotes.create_index("client_id")
+    await db.invoices.create_index("id")
+    await db.invoices.create_index("client_id")
+    await db.payment_transactions.create_index("session_id")
+    await seed_admin()
+    yield
+    client.close()
+    _pdf_executor.shutdown(wait=False)
+
+
+app = FastAPI(title="E3C API", lifespan=lifespan)
 api_router = APIRouter(prefix="/api")
+
+# ─── Rate limiter (en mémoire, sans dépendance externe) ────────────────────
+_rate_buckets: Dict[str, collections.deque] = collections.defaultdict(collections.deque)
+
+def _get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+def check_rate_limit(key: str, max_calls: int, window_seconds: int):
+    """Lève HTTP 429 si la clé dépasse max_calls dans la fenêtre glissante."""
+    now = time.monotonic()
+    dq = _rate_buckets[key]
+    # Purge les entrées expirées
+    while dq and dq[0] < now - window_seconds:
+        dq.popleft()
+    if len(dq) >= max_calls:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Trop de requêtes. Réessayez dans {window_seconds}s.",
+            headers={"Retry-After": str(window_seconds)},
+        )
+    dq.append(now)
 
 # ─── Password helpers ───────────────────────────────────────────────────────
 def hash_password(p: str) -> str:
@@ -232,18 +283,6 @@ class PricingItemUpdate(BaseModel):
     tva_rate: Optional[float] = None
     active: Optional[bool] = None
 
-# ─── Startup ────────────────────────────────────────────────────────────────
-@app.on_event("startup")
-async def startup():
-    await db.users.create_index("email", unique=True)
-    await db.users.create_index("id")
-    await db.quotes.create_index("id")
-    await db.quotes.create_index("client_id")
-    await db.invoices.create_index("id")
-    await db.invoices.create_index("client_id")
-    await db.payment_transactions.create_index("session_id")
-    await seed_admin()
-
 async def seed_admin():
     existing = await db.users.find_one({"email": ADMIN_EMAIL})
     if not existing:
@@ -260,7 +299,8 @@ async def seed_admin():
 
 # ─── Auth Routes ────────────────────────────────────────────────────────────
 @api_router.post("/auth/register")
-async def register(body: RegisterRequest, response: Response):
+async def register(body: RegisterRequest, response: Response, request: Request):
+    check_rate_limit(f"register:{_get_client_ip(request)}", max_calls=5, window_seconds=3600)
     email = body.email.lower().strip()
     if await db.users.find_one({"email": email}):
         raise HTTPException(400, "Email déjà utilisé")
@@ -276,7 +316,8 @@ async def register(body: RegisterRequest, response: Response):
     return {"id": uid, "email": email, "name": body.name, "role": "client"}
 
 @api_router.post("/auth/login")
-async def login(body: LoginRequest, response: Response):
+async def login(body: LoginRequest, response: Response, request: Request):
+    check_rate_limit(f"login:{_get_client_ip(request)}", max_calls=10, window_seconds=900)
     email = body.email.lower().strip()
     user = await db.users.find_one({"email": email}, {"_id": 0})
     if not user or not verify_password(body.password, user.get("password_hash", "")):
@@ -297,10 +338,12 @@ async def logout(response: Response):
 async def me(request: Request):
     return await get_current_user(request)
 
+SECURE_COOKIES = os.environ.get("SECURE_COOKIES", "true").lower() != "false"
+
 def _set_cookies(response: Response, access: str, refresh: str):
-    response.set_cookie("access_token", access, httponly=True, secure=False,
+    response.set_cookie("access_token", access, httponly=True, secure=SECURE_COOKIES,
                         samesite="lax", max_age=86400, path="/")
-    response.set_cookie("refresh_token", refresh, httponly=True, secure=False,
+    response.set_cookie("refresh_token", refresh, httponly=True, secure=SECURE_COOKIES,
                         samesite="lax", max_age=604800, path="/")
 
 # ─── Client management (admin) ──────────────────────────────────────────────
@@ -499,7 +542,8 @@ async def download_quote_pdf(quote_id: str, request: Request):
         raise HTTPException(404, "Devis introuvable")
     if user["role"] == "client" and q["client_id"] != user["id"]:
         raise HTTPException(403, "Accès refusé")
-    pdf_bytes = generate_quote_pdf(q)
+    loop = asyncio.get_event_loop()
+    pdf_bytes = await loop.run_in_executor(_pdf_executor, generate_quote_pdf, q)
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={q['quote_number']}.pdf"})
 
@@ -558,7 +602,8 @@ async def download_invoice_pdf(invoice_id: str, request: Request):
         raise HTTPException(404, "Facture introuvable")
     if user["role"] == "client" and inv["client_id"] != user["id"]:
         raise HTTPException(403, "Accès refusé")
-    pdf_bytes = generate_invoice_pdf(inv)
+    loop = asyncio.get_event_loop()
+    pdf_bytes = await loop.run_in_executor(_pdf_executor, generate_invoice_pdf, inv)
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={inv['invoice_number']}.pdf"})
 
@@ -680,7 +725,8 @@ async def _mark_tranche_paid(invoice_id: str, tranche_id: str):
 
 # ─── Contact (public) ─────────────────────────────────────────────────────────
 @api_router.post("/contact")
-async def submit_contact(form: ContactForm):
+async def submit_contact(form: ContactForm, request: Request):
+    check_rate_limit(f"contact:{_get_client_ip(request)}", max_calls=5, window_seconds=3600)
     doc = form.model_dump()
     doc["id"] = str(uuid.uuid4())
     doc["submitted_at"] = datetime.now(timezone.utc).isoformat()
@@ -689,6 +735,7 @@ async def submit_contact(form: ContactForm):
 
 @api_router.post("/quote-requests")
 async def create_quote_request(body: QuoteRequestCreate, request: Request):
+    check_rate_limit(f"quote_request:{_get_client_ip(request)}", max_calls=10, window_seconds=3600)
     uid = str(uuid.uuid4())
     # Try to link to existing client account
     existing_user = await db.users.find_one({"email": body.email.lower()}, {"_id": 0})
@@ -886,150 +933,6 @@ async def delete_pricing_item(item_id: str, request: Request):
         raise HTTPException(404, "Article introuvable")
     return {"message": "Article supprimé"}
 
-# ─── PDF Generation ───────────────────────────────────────────────────────────
-def generate_quote_pdf(q: dict) -> bytes:
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import cm
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm,
-                            topMargin=2*cm, bottomMargin=2*cm)
-    gold = colors.HexColor("#D4AF37")
-    dark = colors.HexColor("#0A0A0A")
-    styles = getSampleStyleSheet()
-    elems = []
-    # Header
-    elems.append(Paragraph(f'<font size="22" color="#D4AF37"><b>E3C</b></font>', styles["Normal"]))
-    elems.append(Paragraph('<font size="10" color="#666666">Entreprise de Constructions · Guadeloupe · 0690 44 97 14</font>', styles["Normal"]))
-    elems.append(Spacer(1, 0.5*cm))
-    elems.append(Paragraph(f'<font size="18"><b>DEVIS {q["quote_number"]}</b></font>', styles["Normal"]))
-    elems.append(Spacer(1, 0.3*cm))
-    # Info table
-    info = [
-        ["Date :", datetime.now().strftime("%d/%m/%Y"), "Client :", q["client_name"]],
-        ["Valable jusqu'au :", q.get("valid_until", ""), "Email :", q["client_email"]],
-        ["", "", "Téléphone :", q.get("client_phone", "")],
-    ]
-    t = Table(info, colWidths=[4*cm, 6*cm, 4*cm, 5*cm])
-    t.setStyle(TableStyle([("FONTSIZE", (0, 0), (-1, -1), 9), ("TEXTCOLOR", (0, 0), (0, -1), gold),
-                            ("TEXTCOLOR", (2, 0), (2, -1), gold)]))
-    elems.append(t)
-    elems.append(Spacer(1, 0.5*cm))
-    elems.append(Paragraph(f'<b>Objet :</b> {q.get("project_description", "")}', styles["Normal"]))
-    elems.append(Spacer(1, 0.5*cm))
-    # Line items
-    headers = ["Description", "Qté", "Prix HT", "TVA %", "Total HT", "Total TTC"]
-    rows = [headers]
-    for item in q.get("line_items", []):
-        rows.append([item["description"], str(item["quantity"]),
-                     f"{item['unit_price']:.2f} €", f"{item['tva_rate']}%",
-                     f"{item['total_ht']:.2f} €", f"{item['total_ttc']:.2f} €"])
-    lt = Table(rows, colWidths=[7*cm, 2*cm, 2.5*cm, 2*cm, 2.5*cm, 3*cm])
-    lt.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), dark), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTSIZE", (0, 0), (-1, -1), 9), ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f5f5")]),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#dddddd")), ("ALIGN", (1, 0), (-1, -1), "CENTER"),
-    ]))
-    elems.append(lt)
-    elems.append(Spacer(1, 0.3*cm))
-    # Totals
-    totals = [["Total HT :", f"{q['total_ht']:.2f} €"],
-              ["TVA :", f"{q['total_tva']:.2f} €"],
-              ["TOTAL TTC :", f"{q['total_ttc']:.2f} €"]]
-    tt = Table(totals, colWidths=[5*cm, 3*cm])
-    tt.setStyle(TableStyle([("ALIGN", (1, 0), (1, -1), "RIGHT"),
-                             ("FONTSIZE", (0, 0), (-1, -1), 10),
-                             ("FONTNAME", (0, 2), (-1, 2), "Helvetica-Bold"),
-                             ("TEXTCOLOR", (0, 2), (-1, 2), gold),
-                             ("TOPPADDING", (0, 2), (-1, 2), 8)]))
-    from reportlab.platypus import HRFlowable
-    elems.append(HRFlowable(width="100%", color=gold))
-    elems.append(Spacer(1, 0.2*cm))
-    wrap = Table([[Spacer(1, 1), tt]], colWidths=["*", 8*cm])
-    elems.append(wrap)
-    if q.get("notes"):
-        elems.append(Spacer(1, 0.5*cm))
-        elems.append(Paragraph(f'<b>Notes :</b> {q["notes"]}', styles["Normal"]))
-    elems.append(Spacer(1, 1*cm))
-    elems.append(Paragraph('<font size="8" color="#999999">E3C Entreprise de Constructions · Guadeloupe (971)</font>', styles["Normal"]))
-    doc.build(elems)
-    return buf.getvalue()
-
-def generate_invoice_pdf(inv: dict) -> bytes:
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib.units import cm
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm,
-                            topMargin=2*cm, bottomMargin=2*cm)
-    gold = colors.HexColor("#D4AF37")
-    dark = colors.HexColor("#0A0A0A")
-    styles = getSampleStyleSheet()
-    elems = []
-    elems.append(Paragraph('<font size="22" color="#D4AF37"><b>E3C</b></font>', styles["Normal"]))
-    elems.append(Paragraph('<font size="10" color="#666666">Entreprise de Constructions · Guadeloupe · 0690 44 97 14</font>', styles["Normal"]))
-    elems.append(Spacer(1, 0.5*cm))
-    elems.append(Paragraph(f'<font size="18"><b>FACTURE {inv["invoice_number"]}</b></font>', styles["Normal"]))
-    elems.append(Spacer(1, 0.3*cm))
-    info = [["Facture :", inv["invoice_number"], "Client :", inv["client_name"]],
-            ["Devis ref :", inv.get("quote_number", ""), "Email :", inv["client_email"]],
-            ["Date :", datetime.now().strftime("%d/%m/%Y"), "Tél :", inv.get("client_phone", "")]]
-    t = Table(info, colWidths=[4*cm, 6*cm, 4*cm, 5*cm])
-    t.setStyle(TableStyle([("FONTSIZE", (0, 0), (-1, -1), 9),
-                            ("TEXTCOLOR", (0, 0), (0, -1), gold), ("TEXTCOLOR", (2, 0), (2, -1), gold)]))
-    elems.append(t)
-    elems.append(Spacer(1, 0.5*cm))
-    elems.append(Paragraph(f'<b>Objet :</b> {inv.get("project_description", "")}', styles["Normal"]))
-    elems.append(Spacer(1, 0.5*cm))
-    headers = ["Description", "Qté", "Prix HT", "TVA %", "Total HT", "Total TTC"]
-    rows = [headers]
-    for item in inv.get("line_items", []):
-        rows.append([item["description"], str(item["quantity"]),
-                     f"{item['unit_price']:.2f} €", f"{item['tva_rate']}%",
-                     f"{item['total_ht']:.2f} €", f"{item['total_ttc']:.2f} €"])
-    lt = Table(rows, colWidths=[7*cm, 2*cm, 2.5*cm, 2*cm, 2.5*cm, 3*cm])
-    lt.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), dark), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f5f5")]),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#dddddd")), ("ALIGN", (1, 0), (-1, -1), "CENTER"),
-    ]))
-    elems.append(lt)
-    elems.append(Spacer(1, 0.3*cm))
-    totals = [["Total HT :", f"{inv['total_ht']:.2f} €"],
-              ["TVA :", f"{inv['total_tva']:.2f} €"],
-              ["TOTAL TTC :", f"{inv['total_ttc']:.2f} €"]]
-    tt = Table(totals, colWidths=[5*cm, 3*cm])
-    tt.setStyle(TableStyle([("ALIGN", (1, 0), (1, -1), "RIGHT"),
-                             ("FONTSIZE", (0, 0), (-1, -1), 10),
-                             ("FONTNAME", (0, 2), (-1, 2), "Helvetica-Bold"),
-                             ("TEXTCOLOR", (0, 2), (-1, 2), gold), ("TOPPADDING", (0, 2), (-1, 2), 8)]))
-    elems.append(HRFlowable(width="100%", color=gold))
-    elems.append(Spacer(1, 0.2*cm))
-    wrap = Table([[Spacer(1, 1), tt]], colWidths=["*", 8*cm])
-    elems.append(wrap)
-    if inv.get("payment_tranches"):
-        elems.append(Spacer(1, 0.5*cm))
-        elems.append(Paragraph('<b>Calendrier de règlement :</b>', styles["Normal"]))
-        elems.append(Spacer(1, 0.2*cm))
-        tr_rows = [["Tranche", "Montant", "Échéance", "Statut"]]
-        for t in inv["payment_tranches"]:
-            status_label = "Payé" if t["status"] == "paid" else "En attente"
-            tr_rows.append([t["label"], f"{t['amount']:.2f} €", t.get("due_date", ""), status_label])
-        trt = Table(tr_rows, colWidths=[7*cm, 3*cm, 4*cm, 5*cm])
-        trt.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f0f0f0")),
-            ("FONTSIZE", (0, 0), (-1, -1), 9), ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#dddddd"))]))
-        elems.append(trt)
-    elems.append(Spacer(1, 1*cm))
-    elems.append(Paragraph('<font size="8" color="#999999">E3C Entreprise de Constructions · Guadeloupe (971)</font>', styles["Normal"]))
-    doc.build(elems)
-    return buf.getvalue()
-
 # ─── App config ───────────────────────────────────────────────────────────────
 app.mount("/api/uploads", StaticFiles(directory=str(ROOT_DIR / "uploads")), name="uploads")
 app.include_router(api_router)
@@ -1037,6 +940,4 @@ app.add_middleware(CORSMiddleware,
     allow_origins=[FRONTEND_URL, "http://localhost:3000"],
     allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-@app.on_event("shutdown")
-async def shutdown():
-    client.close()
+# shutdown géré par lifespan() ci-dessus

@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Users, FileText, Receipt, CreditCard, Plus, LogOut, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Eye, Send, RefreshCw, TrendingUp, Inbox, Image, MessageSquare, Trash2, Upload } from "lucide-react";
+import { Users, FileText, Receipt, CreditCard, Plus, LogOut, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Eye, Send, RefreshCw, TrendingUp, Inbox, Image, MessageSquare } from "lucide-react";
 import QuoteForm from "@/components/admin/QuoteForm";
 import InvoiceDetail from "@/components/admin/InvoiceDetail";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const ax = () => axios.create({ withCredentials: true });
+import PricingTab from "@/components/admin/tabs/PricingTab";
+import GalleryTab from "@/components/admin/tabs/GalleryTab";
+import TestimonialsTab from "@/components/admin/tabs/TestimonialsTab";
+import { quotesApi, quoteRequestsApi, invoicesApi, paymentsApi, clientsApi, testimonialsApi, galleryApi, pricingApi } from "@/api";
 
 const STATUS_LABELS = {
   draft: { label: "Brouillon", color: "text-gray-400 bg-gray-400/10" },
@@ -37,365 +37,6 @@ function StatCard({ icon: Icon, label, value, color = "text-[#D4AF37]" }) {
   );
 }
 
-const PRICING_UNITS = ["m²", "ml", "m³", "pièce", "heure", "forfait", "jour", "kg", "sac"];
-const PRICING_CATEGORIES = ["Maçonnerie", "Toiture", "Rénovation", "Peinture", "Carrelage", "Charpente", "Terrassement", "Plomberie", "Électricité", "Divers"];
-const TVA_DOM = 8.5;
-
-function PricingTab({ items, onRefresh }) {
-  const EMPTY = { category: "Maçonnerie", description: "", unit: "m²", unit_price_ht: "", tva_rate: TVA_DOM, active: true };
-  const [form, setForm] = useState(EMPTY);
-  const [editId, setEditId] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [filterCat, setFilterCat] = useState("Tout");
-
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  const save = async e => {
-    e.preventDefault();
-    if (!form.description.trim() || form.unit_price_ht === "") { setError("Description et prix requis."); return; }
-    setLoading(true); setError("");
-    try {
-      const payload = { ...form, unit_price_ht: parseFloat(form.unit_price_ht) };
-      if (editId) {
-        await ax().put(`${API}/pricing-grid/${editId}`, payload);
-      } else {
-        await ax().post(`${API}/pricing-grid`, payload);
-      }
-      setForm(EMPTY); setEditId(null);
-      onRefresh();
-    } catch (err) {
-      setError(err.response?.data?.detail || "Erreur.");
-    } finally { setLoading(false); }
-  };
-
-  const startEdit = item => {
-    setForm({ category: item.category, description: item.description, unit: item.unit, unit_price_ht: item.unit_price_ht, tva_rate: item.tva_rate, active: item.active });
-    setEditId(item.id);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const toggleActive = async item => {
-    await ax().put(`${API}/pricing-grid/${item.id}`, { active: !item.active });
-    onRefresh();
-  };
-
-  const deleteItem = async id => {
-    if (!window.confirm("Supprimer cet article ?")) return;
-    await ax().delete(`${API}/pricing-grid/${id}`);
-    onRefresh();
-  };
-
-  const filtered = filterCat === "Tout" ? items : items.filter(i => i.category === filterCat);
-  const groupedCats = [...new Set(items.map(i => i.category))];
-
-  return (
-    <div>
-      <h1 className="font-outfit font-bold text-2xl text-white mb-2">Grille tarifaire</h1>
-      <p className="text-gray-500 text-sm mb-6">Les articles actifs sont utilisés par les clients pour construire leur devis estimatif.</p>
-
-      {/* Formulaire ajout / édition */}
-      <div className="bg-[#121212] border border-[#D4AF37]/20 rounded-sm p-6 mb-8">
-        <h3 className="font-outfit font-semibold text-white text-sm mb-4 flex items-center gap-2">
-          <Receipt size={14} className="text-[#D4AF37]" />
-          {editId ? "Modifier l'article" : "Ajouter un article"}
-        </h3>
-        <form onSubmit={save} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Catégorie *</label>
-              <select value={form.category} onChange={e => set("category", e.target.value)}
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-category">
-                {PRICING_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div className="lg:col-span-2">
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Description *</label>
-              <input value={form.description} onChange={e => set("description", e.target.value)}
-                placeholder="Ex : Mur en agglos 15cm, Peinture façade acrylique…"
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-description" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Unité *</label>
-              <select value={form.unit} onChange={e => set("unit", e.target.value)}
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-unit">
-                {PRICING_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Prix HT (€) *</label>
-              <input type="number" min="0" step="0.01" value={form.unit_price_ht} onChange={e => set("unit_price_ht", e.target.value)}
-                placeholder="0.00"
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-price" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">TVA (%)</label>
-              <input type="number" min="0" max="100" step="0.5" value={form.tva_rate} onChange={e => set("tva_rate", parseFloat(e.target.value))}
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="active-chk" checked={form.active} onChange={e => set("active", e.target.checked)} className="accent-[#D4AF37]" />
-            <label htmlFor="active-chk" className="text-gray-300 text-sm">Actif (visible dans le wizard devis)</label>
-          </div>
-          {error && <p className="text-red-400 text-xs">{error}</p>}
-          <div className="flex gap-3">
-            <button type="submit" disabled={loading} data-testid="pricing-save-btn"
-              className="flex items-center gap-2 bg-[#D4AF37] text-black font-bold text-sm px-6 py-2.5 hover:bg-[#E6C65A] rounded-sm disabled:opacity-60 transition-colors">
-              {loading ? "Enregistrement…" : editId ? "Mettre à jour" : "Ajouter à la grille"}
-            </button>
-            {editId && (
-              <button type="button" onClick={() => { setForm(EMPTY); setEditId(null); }}
-                className="text-gray-400 hover:text-white text-sm px-4 py-2.5 border border-white/10 rounded-sm transition-colors">
-                Annuler
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-
-      {/* Filtres catégorie */}
-      <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
-        {["Tout", ...groupedCats].map(c => (
-          <button key={c} onClick={() => setFilterCat(c)}
-            className={`flex-shrink-0 px-3 py-1 text-xs font-semibold rounded-sm border transition-all ${filterCat === c ? "bg-[#D4AF37] border-[#D4AF37] text-black" : "border-white/10 text-gray-400 hover:border-white/20"}`}>
-            {c}
-          </button>
-        ))}
-        <span className="text-gray-600 text-xs ml-2 flex-shrink-0">{filtered.length} article{filtered.length > 1 ? "s" : ""}</span>
-      </div>
-
-      {/* Table */}
-      <div className="bg-[#121212] border border-white/5 rounded-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-white/5">
-              <th className="text-left text-xs text-gray-500 uppercase tracking-wider px-4 py-3">Description</th>
-              <th className="text-left text-xs text-gray-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Catégorie</th>
-              <th className="text-right text-xs text-gray-500 uppercase tracking-wider px-4 py-3">Prix HT</th>
-              <th className="text-center text-xs text-gray-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Unité</th>
-              <th className="text-center text-xs text-gray-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">TVA</th>
-              <th className="text-center text-xs text-gray-500 uppercase tracking-wider px-4 py-3">Statut</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((item, i) => (
-              <tr key={item.id} className={`border-b border-white/5 last:border-0 hover:bg-white/2 ${!item.active ? "opacity-50" : ""}`} data-testid={`pricing-row-${i}`}>
-                <td className="px-4 py-3">
-                  <p className="text-white font-medium">{item.description}</p>
-                </td>
-                <td className="px-4 py-3 hidden md:table-cell">
-                  <span className="text-xs text-[#D4AF37]/80 bg-[#D4AF37]/8 px-2 py-0.5 rounded-sm">{item.category}</span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <span className="text-white font-semibold">{item.unit_price_ht.toFixed(2)} €</span>
-                </td>
-                <td className="px-4 py-3 text-center hidden sm:table-cell">
-                  <span className="text-gray-400 text-xs">{item.unit}</span>
-                </td>
-                <td className="px-4 py-3 text-center hidden sm:table-cell">
-                  <span className="text-gray-400 text-xs">{item.tva_rate}%</span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <button onClick={() => toggleActive(item)}
-                    className={`text-xs px-2 py-1 rounded-sm border transition-colors ${item.active ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-gray-500/10 text-gray-500 border-gray-500/20"}`}>
-                    {item.active ? "Actif" : "Inactif"}
-                  </button>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2 justify-end">
-                    <button onClick={() => startEdit(item)} data-testid={`edit-pricing-${item.id}`}
-                      className="text-xs text-[#D4AF37] hover:underline">Modifier</button>
-                    <button onClick={() => deleteItem(item.id)} data-testid={`delete-pricing-${item.id}`}
-                      className="text-xs text-red-400 hover:underline">Supprimer</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-500 text-sm">
-                Aucun article. Ajoutez vos premières prestations ci-dessus.
-              </td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-const GALLERY_CATEGORIES = ["Maçonnerie", "Toiture", "Rénovation", "Peinture", "Carrelage"];
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-
-function GalleryTab({ images, onRefresh }) {
-  const [file, setFile] = useState(null);
-  const [label, setLabel] = useState("");
-  const [category, setCategory] = useState("Maçonnerie");
-  const [preview, setPreview] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const handleFile = e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
-    if (!label) setLabel(f.name.replace(/\.[^.]+$/, "").replace(/-|_/g, " "));
-  };
-
-  const upload = async e => {
-    e.preventDefault();
-    if (!file || !label.trim()) { setError("Fichier et libellé requis."); return; }
-    setLoading(true); setError(""); setSuccess("");
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("label", label.trim());
-      fd.append("category", category);
-      await ax().post(`${API}/gallery`, fd, { headers: { "Content-Type": "multipart/form-data" } });
-      setSuccess("Photo ajoutée avec succès !");
-      setFile(null); setLabel(""); setPreview(null);
-      onRefresh();
-    } catch (err) {
-      setError(err.response?.data?.detail || "Erreur lors de l'upload.");
-    } finally { setLoading(false); }
-  };
-
-  const deleteImg = async id => {
-    if (!window.confirm("Supprimer cette photo ?")) return;
-    try { await ax().delete(`${API}/gallery/${id}`); onRefresh(); }
-    catch { alert("Erreur lors de la suppression."); }
-  };
-
-  return (
-    <div>
-      <h1 className="font-outfit font-bold text-2xl text-white mb-6">Galerie ({images.length} photos admin)</h1>
-
-      {/* Upload form */}
-      <div className="bg-[#121212] border border-white/5 rounded-sm p-6 mb-8">
-        <h3 className="font-outfit font-semibold text-white text-sm mb-4 flex items-center gap-2"><Upload size={14} className="text-[#D4AF37]" /> Ajouter une photo</h3>
-        <form onSubmit={upload} className="space-y-4">
-          {/* Drop zone */}
-          <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 hover:border-[#D4AF37]/30 rounded-sm p-8 cursor-pointer transition-colors group">
-            {preview
-              ? <img src={preview} alt="preview" className="max-h-40 object-contain mb-3 rounded-sm" />
-              : <><Upload size={28} className="text-gray-600 group-hover:text-[#D4AF37]/60 mb-2 transition-colors" /><p className="text-gray-500 text-sm">Cliquer pour choisir une photo (JPEG, PNG, WEBP · max 10 Mo)</p></>
-            }
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} className="hidden" data-testid="gallery-file-input" />
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Libellé *</label>
-              <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Résidence Martin, Rénovation cuisine…"
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-4 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="gallery-label-input" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Catégorie *</label>
-              <select value={category} onChange={e => setCategory(e.target.value)}
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-4 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="gallery-category-select">
-                {GALLERY_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-          </div>
-          {error && <p className="text-red-400 text-xs">{error}</p>}
-          {success && <p className="text-green-400 text-xs">{success}</p>}
-          <button type="submit" disabled={loading} data-testid="gallery-upload-btn"
-            className="flex items-center gap-2 bg-[#D4AF37] text-black font-bold text-sm px-6 py-2.5 hover:bg-[#E6C65A] transition-colors rounded-sm disabled:opacity-60">
-            {loading ? "Upload…" : <><Upload size={14}/> Publier dans la galerie</>}
-          </button>
-        </form>
-      </div>
-
-      {/* Photo list */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {images.map(img => (
-          <div key={img.id} className="relative group bg-[#141414] border border-white/5 rounded-sm overflow-hidden">
-            <img src={`${BACKEND_URL}${img.url}`} alt={img.label} className="w-full aspect-video object-cover" loading="lazy" />
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-3">
-              <button onClick={() => deleteImg(img.id)} className="self-end w-7 h-7 bg-red-500/80 hover:bg-red-500 rounded-sm flex items-center justify-center" data-testid={`delete-gallery-${img.id}`}>
-                <Trash2 size={13} className="text-white" />
-              </button>
-              <div>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]">{img.category}</span>
-                <p className="text-white text-xs font-medium leading-snug">{img.label}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-        {images.length === 0 && (
-          <div className="col-span-4 py-12 text-center border border-dashed border-white/10 rounded-sm">
-            <p className="text-gray-500 text-sm">Aucune photo uploadée. Les photos statiques sont toujours visibles dans la galerie publique.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TestimonialsTab({ testimonials, onRefresh }) {
-  const updateStatus = async (id, status) => {
-    try { await ax().patch(`${API}/testimonials/${id}`, { status }); onRefresh(); }
-    catch { alert("Erreur lors de la mise à jour."); }
-  };
-
-  const pending = testimonials.filter(t => t.status === "pending");
-  const approved = testimonials.filter(t => t.status === "approved");
-  const rejected = testimonials.filter(t => t.status === "rejected");
-
-  return (
-    <div>
-      <h1 className="font-outfit font-bold text-2xl text-white mb-2">Témoignages</h1>
-      <div className="flex gap-4 mb-6">
-        <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-sm">{pending.length} en attente</span>
-        <span className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded-sm">{approved.length} publiés</span>
-        <span className="text-xs text-gray-400 bg-gray-400/10 px-2 py-1 rounded-sm">{rejected.length} rejetés</span>
-      </div>
-      <div className="space-y-3">
-        {testimonials.map(t => (
-          <div key={t.id} className={`bg-[#121212] border rounded-sm p-5 ${t.status === "pending" ? "border-yellow-400/20" : t.status === "approved" ? "border-green-500/15" : "border-white/5"}`} data-testid={`testimonial-admin-${t.id}`}>
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-1">
-                  <p className="text-white font-semibold text-sm">{t.name}</p>
-                  {t.commune && <span className="text-xs text-gray-500">{t.commune}</span>}
-                  {t.service && <span className="text-xs text-[#D4AF37]/70">{t.service}</span>}
-                  <div className="flex gap-0.5 ml-1">
-                    {Array.from({length:5}).map((_,i) => <span key={i} className={`text-[10px] ${i < t.stars ? "text-[#D4AF37]" : "text-gray-700"}`}>★</span>)}
-                  </div>
-                </div>
-                {t.email && <p className="text-gray-600 text-xs mb-2">{t.email}</p>}
-                <p className="text-gray-300 text-sm leading-relaxed">"{t.text}"</p>
-                <p className="text-gray-600 text-xs mt-2">{new Date(t.created_at).toLocaleDateString("fr-FR")}</p>
-              </div>
-              <div className="flex gap-2 flex-shrink-0">
-                {t.status !== "approved" && (
-                  <button onClick={() => updateStatus(t.id, "approved")} data-testid={`approve-${t.id}`}
-                    className="flex items-center gap-1 text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/20 px-3 py-1.5 rounded-sm transition-colors">
-                    <CheckCircle size={12}/> Publier
-                  </button>
-                )}
-                {t.status !== "rejected" && (
-                  <button onClick={() => updateStatus(t.id, "rejected")} data-testid={`reject-${t.id}`}
-                    className="flex items-center gap-1 text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/15 px-3 py-1.5 rounded-sm transition-colors">
-                    <XCircle size={12}/> Rejeter
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-        {testimonials.length === 0 && (
-          <div className="bg-[#121212] border border-white/5 rounded-sm p-12 text-center">
-            <p className="text-gray-500 text-sm">Aucun témoignage reçu pour le moment.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -417,17 +58,17 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       const [q, inv, cl, pay, qr, gal, testi, pricing] = await Promise.all([
-        ax().get(`${API}/quotes`),
-        ax().get(`${API}/invoices`),
-        ax().get(`${API}/clients`),
-        ax().get(`${API}/payments`),
-        ax().get(`${API}/quote-requests`),
-        ax().get(`${API}/gallery`),
-        ax().get(`${API}/testimonials/admin`),
-        ax().get(`${API}/pricing-grid`),
+        quotesApi.list(),
+        invoicesApi.list(),
+        clientsApi.list(),
+        paymentsApi.list(),
+        quoteRequestsApi.list(),
+        galleryApi.list(),
+        testimonialsApi.listAdmin(),
+        pricingApi.list(),
       ]);
-      setQuotes(q.data); setInvoices(inv.data); setClients(cl.data); setPayments(pay.data);
-      setQuoteRequests(qr.data); setGalleryImages(gal.data); setTestimonials(testi.data); setPricingItems(pricing.data);
+      setQuotes(q); setInvoices(inv); setClients(cl); setPayments(pay);
+      setQuoteRequests(qr); setGalleryImages(gal); setTestimonials(testi); setPricingItems(pricing);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -437,12 +78,12 @@ export default function AdminDashboard() {
   const handleLogout = async () => { await logout(); navigate("/"); };
 
   const sendQuote = async (id) => {
-    await ax().post(`${API}/quotes/${id}/send`);
+    await quotesApi.send(id);
     fetchAll();
   };
 
   const convertToInvoice = async (id) => {
-    await ax().post(`${API}/quotes/${id}/convert`);
+    await quotesApi.convert(id);
     fetchAll();
     setTab("invoices");
   };
