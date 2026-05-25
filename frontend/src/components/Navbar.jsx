@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { X, LogIn, UserPlus, User, Home, Briefcase, Image, MapPin, HelpCircle, Mail, FileEdit } from "lucide-react";
+import { X, LogIn, UserPlus, User, Home, Briefcase, Image, MapPin, HelpCircle, Mail, FileEdit, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const WHATSAPP_ICON = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -13,6 +14,7 @@ export default function Navbar({ whatsapp }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
+  const { isDark, toggle } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const isHome = location.pathname === "/";
@@ -56,7 +58,7 @@ export default function Navbar({ whatsapp }) {
         data-testid="navbar"
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           scrolled || open
-            ? "bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-white/5 shadow-xl"
+            ? "bg-[#FAFAF8]/95 dark:bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-black/8 dark:border-white/5 shadow-xl"
             : "bg-transparent"
         }`}
       >
@@ -67,15 +69,26 @@ export default function Navbar({ whatsapp }) {
               <span className="font-outfit font-black text-black text-sm leading-none">E3C</span>
             </div>
             <div className="hidden sm:block">
-              <p className="font-outfit font-bold text-white text-sm leading-tight group-hover:text-[#D4AF37] transition-colors">
+              <p className="font-outfit font-bold text-[#1A1A1A] dark:text-white text-sm leading-tight group-hover:text-[#D4AF37] transition-colors">
                 E3C — Entreprise de constructions
               </p>
               <p className="text-[9px] text-gray-500 uppercase tracking-widest">Guadeloupe · BTP</p>
             </div>
           </Link>
 
-          {/* Right: account icons + hamburger */}
+          {/* Right: theme toggle + account icons + hamburger */}
           <div className="flex items-center gap-1 sm:gap-2">
+
+            {/* Theme toggle */}
+            <button
+              onClick={toggle}
+              data-testid="theme-toggle"
+              aria-label={isDark ? "Passer en mode clair" : "Passer en mode sombre"}
+              className="flex items-center justify-center w-9 h-9 text-[#737373] hover:text-[#D4AF37] dark:text-gray-400 dark:hover:text-[#D4AF37] transition-colors rounded-sm hover:bg-black/5 dark:hover:bg-white/5"
+            >
+              {isDark ? <Sun size={17} /> : <Moon size={17} />}
+            </button>
+
             {user ? (
               /* Logged-in user: avatar + dashboard link */
               <Link
@@ -93,7 +106,7 @@ export default function Navbar({ whatsapp }) {
                   to="/connexion"
                   data-testid="navbar-login-icon"
                   title="Se connecter"
-                  className="flex items-center gap-1.5 text-gray-300 hover:text-[#D4AF37] transition-colors p-2 rounded-sm hover:bg-white/5 text-xs"
+                  className="flex items-center gap-1.5 text-[#4B4B4B] hover:text-[#D4AF37] dark:text-gray-300 dark:hover:text-[#D4AF37] transition-colors p-2 rounded-sm hover:bg-black/5 dark:hover:bg-white/5 text-xs"
                 >
                   <LogIn size={17} />
                   <span className="hidden md:inline text-xs font-medium">Connexion</span>
@@ -102,7 +115,7 @@ export default function Navbar({ whatsapp }) {
                   to="/inscription"
                   data-testid="navbar-register-icon"
                   title="Créer un compte"
-                  className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white transition-colors px-2.5 py-1.5 rounded-sm text-xs font-medium"
+                  className="flex items-center gap-1.5 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-[#4B4B4B] hover:text-[#1A1A1A] dark:text-gray-200 dark:hover:text-white transition-colors px-2.5 py-1.5 rounded-sm text-xs font-medium"
                 >
                   <UserPlus size={15} />
                   <span className="hidden md:inline">Compte</span>
@@ -115,7 +128,7 @@ export default function Navbar({ whatsapp }) {
               onClick={() => setOpen(!open)}
               data-testid="navbar-menu-toggle"
               aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
-              className="ml-1 flex flex-col items-center justify-center w-9 h-9 gap-1.5 text-white hover:text-[#D4AF37] transition-colors rounded-sm hover:bg-white/5"
+              className="ml-1 flex flex-col items-center justify-center w-9 h-9 gap-1.5 text-[#1A1A1A] hover:text-[#D4AF37] dark:text-white dark:hover:text-[#D4AF37] transition-colors rounded-sm hover:bg-black/5 dark:hover:bg-white/5"
             >
               <span className={`block h-0.5 bg-current transition-all duration-300 ${open ? "w-5 rotate-45 translate-y-2" : "w-5"}`} />
               <span className={`block h-0.5 bg-current transition-all duration-300 ${open ? "opacity-0 w-0" : "w-4"}`} />
@@ -127,24 +140,24 @@ export default function Navbar({ whatsapp }) {
 
       {/* Overlay */}
       {open && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setOpen(false)} />
+        <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm z-40" onClick={() => setOpen(false)} />
       )}
 
       {/* Slide-out Drawer */}
       <div
         data-testid="nav-drawer"
-        className={`fixed top-0 right-0 h-full w-full sm:w-80 z-50 bg-[#080808] border-l border-white/5 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
+        className={`fixed top-0 right-0 h-full w-full sm:w-80 z-50 bg-white dark:bg-[#080808] border-l border-black/8 dark:border-white/5 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between px-6 h-16 md:h-20 border-b border-white/5 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 h-16 md:h-20 border-b border-black/8 dark:border-white/5 flex-shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-[#D4AF37] flex items-center justify-center rounded-sm">
               <span className="font-outfit font-black text-black text-xs">E3C</span>
             </div>
-            <span className="font-outfit font-semibold text-white text-sm">Navigation</span>
+            <span className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-sm">Navigation</span>
           </div>
-          <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-white transition-colors p-1">
+          <button onClick={() => setOpen(false)} className="text-[#737373] hover:text-[#1A1A1A] dark:text-gray-400 dark:hover:text-white transition-colors p-1">
             <X size={22} />
           </button>
         </div>
@@ -159,17 +172,26 @@ export default function Navbar({ whatsapp }) {
                 className={`w-full flex items-center gap-4 px-4 py-3.5 transition-colors rounded-sm text-left group ${
                   item.highlight
                     ? "bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] hover:bg-[#D4AF37]/20"
-                    : "text-gray-300 hover:text-white hover:bg-white/5"
+                    : "text-[#4B4B4B] hover:text-[#1A1A1A] hover:bg-black/5 dark:text-gray-300 dark:hover:text-white dark:hover:bg-white/5"
                 }`}
               >
-                <Icon size={18} className={`flex-shrink-0 group-hover:scale-110 transition-transform ${item.highlight ? "text-[#D4AF37]" : "text-[#D4AF37]"}`} />
+                <Icon size={18} className={`flex-shrink-0 group-hover:scale-110 transition-transform text-[#D4AF37]`} />
                 <span className="font-medium text-base">{item.label}</span>
               </button>
             );
           })}
+
+          {/* Theme toggle in drawer */}
+          <button
+            onClick={toggle}
+            className="w-full flex items-center gap-4 px-4 py-3.5 transition-colors rounded-sm text-left text-[#4B4B4B] hover:text-[#1A1A1A] hover:bg-black/5 dark:text-gray-300 dark:hover:text-white dark:hover:bg-white/5"
+          >
+            {isDark ? <Sun size={18} className="flex-shrink-0 text-[#D4AF37]" /> : <Moon size={18} className="flex-shrink-0 text-[#D4AF37]" />}
+            <span className="font-medium text-base">{isDark ? "Mode clair" : "Mode sombre"}</span>
+          </button>
         </nav>
 
-        <div className="px-4 py-5 border-t border-white/5 space-y-3 flex-shrink-0">
+        <div className="px-4 py-5 border-t border-black/8 dark:border-white/5 space-y-3 flex-shrink-0">
           <a
             href={`https://wa.me/${whatsapp}?text=Bonjour%20E3C%2C%20je%20souhaite%20un%20devis%20gratuit.`}
             target="_blank"
@@ -181,7 +203,7 @@ export default function Navbar({ whatsapp }) {
             <WHATSAPP_ICON />
             Devis Gratuit WhatsApp
           </a>
-          <p className="text-center text-xs text-gray-600">E3C — Entreprise de constructions · Guadeloupe (971)</p>
+          <p className="text-center text-xs text-[#9E9E9E] dark:text-gray-600">E3C — Entreprise de constructions · Guadeloupe (971)</p>
         </div>
       </div>
     </>

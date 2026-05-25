@@ -20,7 +20,7 @@ export default function Contact({ whatsapp }) {
       external: true,
       style: "border-green-500/20 hover:border-green-500/40",
       iconBg: "bg-green-500/10",
-      iconColor: "text-green-400",
+      iconColor: "text-green-600 dark:text-green-400",
       btnStyle: "bg-green-600 text-white hover:bg-green-500",
     },
     {
@@ -32,7 +32,7 @@ export default function Contact({ whatsapp }) {
       onClick: true,
       style: "border-blue-500/20 hover:border-blue-500/40",
       iconBg: "bg-blue-500/10",
-      iconColor: "text-blue-400",
+      iconColor: "text-blue-600 dark:text-blue-400",
       btnStyle: "bg-blue-600 text-white hover:bg-blue-500",
     },
   ];
@@ -41,38 +41,38 @@ export default function Contact({ whatsapp }) {
     <section
       id="contact"
       data-testid="contact-section"
-      className="py-20 md:py-32 bg-[#0D0D0D] relative overflow-hidden"
+      className="py-20 md:py-32 bg-[#F5F4F0] dark:bg-[#0D0D0D] relative overflow-hidden"
     >
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#D4AF37]/2 to-transparent pointer-events-none" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12">
         <div className="text-center mb-12">
           <p className="text-[#D4AF37] text-xs font-bold uppercase tracking-widest mb-3">Contact</p>
-          <h2 className="font-outfit font-bold text-3xl md:text-4xl text-white mb-4">
+          <h2 className="font-outfit font-bold text-3xl md:text-4xl text-[#1A1A1A] dark:text-white mb-4">
             Contactez-nous
           </h2>
           <div className="section-divider mx-auto mb-4" />
-          <p className="text-gray-400 text-base max-w-lg mx-auto">
+          <p className="text-[#737373] dark:text-gray-400 text-base max-w-lg mx-auto">
             Plusieurs moyens de nous joindre. Choisissez celui qui vous convient,
             devis gratuit et sans engagement.
           </p>
         </div>
 
-        {/* 3 contact channels */}
-        <div className="grid md:grid-cols-3 gap-5 mb-10">
+        {/* 2 contact channels */}
+        <div className="grid md:grid-cols-2 gap-5 mb-10 max-w-2xl mx-auto">
           {channels.map((ch) => {
             const Icon = ch.icon;
             return (
               <div
                 key={ch.label}
                 data-testid={`contact-channel-${ch.label}`}
-                className={`bg-[#121212] border rounded-sm p-7 flex flex-col items-center text-center transition-all duration-200 ${ch.style}`}
+                className={`bg-white dark:bg-[#121212] border rounded-sm p-7 flex flex-col items-center text-center transition-all duration-200 shadow-sm dark:shadow-none ${ch.style}`}
               >
                 <div className={`w-14 h-14 ${ch.iconBg} flex items-center justify-center rounded-full mb-4 ${ch.iconColor}`}>
                   <Icon />
                 </div>
-                <p className="font-outfit font-semibold text-white text-lg mb-1">{ch.label}</p>
-                <p className="text-gray-400 text-sm mb-5">{ch.value}</p>
+                <p className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-lg mb-1">{ch.label}</p>
+                <p className="text-[#737373] dark:text-gray-400 text-sm mb-5">{ch.value}</p>
                 {ch.onClick ? (
                   <button
                     onClick={() => navigate("/contact")}

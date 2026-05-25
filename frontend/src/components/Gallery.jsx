@@ -32,28 +32,27 @@ export default function Gallery() {
       .catch(() => setApiImages([]));
   }, []);
 
-  // Les images admin (API) s'affichent EN PREMIER, puis les statiques
   const allImages = [...apiImages, ...STATIC_IMAGES];
   const filtered = activeFilter === "Tout"
     ? allImages
     : allImages.filter(img => img.category === activeFilter);
 
   return (
-    <section id="gallery" data-testid="gallery-section" className="py-16 md:py-24 bg-[#0A0A0A]">
+    <section id="gallery" data-testid="gallery-section" className="py-16 md:py-24 bg-[#FAFAF8] dark:bg-[#0A0A0A]">
       <div className="max-w-7xl mx-auto px-6 md:px-12">
 
-        {/* Header — même style que Services/Valeurs */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
           <div>
             <p className="text-[#D4AF37] text-xs font-bold uppercase tracking-widest mb-2">
               Nos Réalisations
             </p>
-            <h2 className="font-outfit font-bold text-3xl md:text-4xl text-white mb-3">
+            <h2 className="font-outfit font-bold text-3xl md:text-4xl text-[#1A1A1A] dark:text-white mb-3">
               Un travail soigné, chantier après chantier
             </h2>
             <div className="section-divider" />
           </div>
-          <div className="flex items-center gap-2 text-gray-500 text-xs md:text-right flex-shrink-0">
+          <div className="flex items-center gap-2 text-[#9E9E9E] dark:text-gray-500 text-xs md:text-right flex-shrink-0">
             <Grid3X3 size={12} />
             <span>{filtered.length} réalisation{filtered.length > 1 ? "s" : ""}</span>
           </div>
@@ -69,7 +68,7 @@ export default function Gallery() {
               className={`flex-shrink-0 px-4 py-1.5 text-xs font-semibold rounded-sm border transition-all duration-150 ${
                 activeFilter === filter
                   ? "bg-[#D4AF37] border-[#D4AF37] text-black"
-                  : "bg-transparent border-white/10 text-gray-400 hover:border-white/25 hover:text-gray-200"
+                  : "bg-transparent border-black/10 dark:border-white/10 text-[#737373] dark:text-gray-400 hover:border-black/25 dark:hover:border-white/25 hover:text-[#1A1A1A] dark:hover:text-gray-200"
               }`}
             >
               {filter}
@@ -83,7 +82,7 @@ export default function Gallery() {
             <div
               key={img.label}
               data-testid={`gallery-item-${i}`}
-              className="gallery-item relative cursor-pointer rounded-sm overflow-hidden bg-[#141414]"
+              className="gallery-item relative cursor-pointer rounded-sm overflow-hidden bg-[#E8E5DD] dark:bg-[#141414]"
               style={{ aspectRatio: "4/3" }}
               onClick={() => setLightbox(img)}
             >
@@ -110,12 +109,12 @@ export default function Gallery() {
 
         {/* Empty state */}
         {filtered.length === 0 && (
-          <div className="py-16 text-center border border-white/5 rounded-sm">
-            <p className="text-gray-500 text-sm">Aucune réalisation dans cette catégorie pour le moment.</p>
+          <div className="py-16 text-center border border-black/7 dark:border-white/5 rounded-sm">
+            <p className="text-[#9E9E9E] dark:text-gray-500 text-sm">Aucune réalisation dans cette catégorie pour le moment.</p>
           </div>
         )}
 
-        <p className="text-gray-600 text-xs text-center mt-6">
+        <p className="text-[#ADADAD] dark:text-gray-600 text-xs text-center mt-6">
           Vos photos de chantiers seront intégrées ici pour valoriser vos réalisations.
         </p>
       </div>

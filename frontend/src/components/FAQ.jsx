@@ -36,18 +36,18 @@ export default function FAQ() {
   const [open, setOpen] = useState(null);
 
   return (
-    <section id="faq" data-testid="faq-section" className="py-20 md:py-32 bg-[#0D0D0D]">
+    <section id="faq" data-testid="faq-section" className="py-20 md:py-32 bg-[#F5F4F0] dark:bg-[#0D0D0D]">
       <div className="max-w-4xl mx-auto px-6 md:px-12">
         {/* Header */}
         <div className="text-center mb-12 md:mb-16">
           <p className="text-[#D4AF37] text-xs font-bold uppercase tracking-widest mb-3">
             FAQ
           </p>
-          <h2 className="font-outfit font-bold text-3xl md:text-4xl text-white mb-4">
+          <h2 className="font-outfit font-bold text-3xl md:text-4xl text-[#1A1A1A] dark:text-white mb-4">
             Questions fréquentes
           </h2>
           <div className="section-divider mx-auto mb-4" />
-          <p className="text-gray-400 text-base">
+          <p className="text-[#737373] dark:text-gray-400 text-base">
             Vos questions, nos réponses. Besoin d'autre chose ? Contactez-nous.
           </p>
         </div>
@@ -58,14 +58,14 @@ export default function FAQ() {
             <div
               key={i}
               data-testid={`faq-item-${i}`}
-              className="border border-white/8 bg-[#121212] rounded-sm overflow-hidden"
+              className="border border-black/8 dark:border-white/8 bg-white dark:bg-[#121212] rounded-sm overflow-hidden shadow-sm dark:shadow-none"
             >
               <button
                 onClick={() => setOpen(open === i ? null : i)}
-                className="w-full flex items-center justify-between px-6 py-5 text-left group hover:bg-white/2 transition-colors"
+                className="w-full flex items-center justify-between px-6 py-5 text-left group hover:bg-black/3 dark:hover:bg-white/2 transition-colors"
                 data-testid={`faq-toggle-${i}`}
               >
-                <span className="text-white font-medium text-sm md:text-base pr-4 group-hover:text-[#D4AF37] transition-colors">
+                <span className="text-[#1A1A1A] dark:text-white font-medium text-sm md:text-base pr-4 group-hover:text-[#D4AF37] transition-colors">
                   {faq.q}
                 </span>
                 <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
@@ -79,9 +79,9 @@ export default function FAQ() {
               {open === i && (
                 <div
                   data-testid={`faq-answer-${i}`}
-                  className="px-6 pb-5 border-t border-white/5"
+                  className="px-6 pb-5 border-t border-black/7 dark:border-white/5"
                 >
-                  <p className="text-gray-400 text-sm leading-relaxed pt-4">
+                  <p className="text-[#737373] dark:text-gray-400 text-sm leading-relaxed pt-4">
                     {faq.a}
                   </p>
                 </div>
@@ -91,11 +91,11 @@ export default function FAQ() {
         </div>
 
         {/* Bottom CTA */}
-        <div className="mt-12 text-center p-8 border border-white/5 bg-[#121212] rounded-sm">
-          <p className="text-white font-outfit font-semibold text-lg mb-2">
+        <div className="mt-12 text-center p-8 border border-black/7 dark:border-white/5 bg-white dark:bg-[#121212] rounded-sm shadow-sm dark:shadow-none">
+          <p className="text-[#1A1A1A] dark:text-white font-outfit font-semibold text-lg mb-2">
             Vous avez d'autres questions ?
           </p>
-          <p className="text-gray-400 text-sm mb-6">
+          <p className="text-[#737373] dark:text-gray-400 text-sm mb-6">
             Contactez-nous directement par WhatsApp ou téléphone.
           </p>
           <a

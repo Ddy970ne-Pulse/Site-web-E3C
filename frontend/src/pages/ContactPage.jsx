@@ -100,7 +100,7 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="bg-[#0A0A0A] min-h-screen">
+    <div className="bg-[#FAFAF8] dark:bg-[#0A0A0A] min-h-screen">
       <SEO title="Contactez-nous" description="Contactez E3C en Guadeloupe. WhatsApp, formulaire de contact. Réponse rapide garantie." url="/contact" />
       <Navbar whatsapp={WHATSAPP} />
 
@@ -112,10 +112,10 @@ export default function ContactPage() {
           <p className="text-[#D4AF37] text-xs font-bold uppercase tracking-widest mb-3">
             Contactez-nous
           </p>
-          <h1 className="font-outfit font-bold text-4xl sm:text-5xl text-white mb-4 leading-tight">
+          <h1 className="font-outfit font-bold text-4xl sm:text-5xl text-[#1A1A1A] dark:text-white mb-4 leading-tight">
             Parlons de votre projet
           </h1>
-          <p className="text-gray-400 text-base md:text-lg leading-relaxed max-w-xl mx-auto">
+          <p className="text-[#737373] dark:text-gray-400 text-base md:text-lg leading-relaxed max-w-xl mx-auto">
             Devis gratuit, réponse rapide. Plusieurs moyens de nous joindre —
             choisissez celui qui vous convient le mieux.
           </p>
@@ -136,8 +136,8 @@ export default function ContactPage() {
                 <div className={`w-9 h-9 flex items-center justify-center mb-3 ${ch.color}`}>
                   <Icon />
                 </div>
-                <p className={`font-outfit font-semibold text-white text-sm mb-0.5`}>{ch.title}</p>
-                <p className="text-gray-500 text-xs mb-1">{ch.subtitle}</p>
+                <p className={`font-outfit font-semibold text-[#1A1A1A] dark:text-white text-sm mb-0.5`}>{ch.title}</p>
+                <p className="text-[#9E9E9E] dark:text-gray-500 text-xs mb-1">{ch.subtitle}</p>
                 <p className={`font-medium text-sm ${ch.color}`}>{ch.value}</p>
               </div>
             );
@@ -154,11 +154,11 @@ export default function ContactPage() {
           {/* Left — Info */}
           <div className="lg:col-span-2 space-y-6">
             <div>
-              <h2 className="font-outfit font-bold text-2xl text-white mb-2">
+              <h2 className="font-outfit font-bold text-2xl text-[#1A1A1A] dark:text-white mb-2">
                 E3C — Entreprise de constructions
               </h2>
               <div className="section-divider mb-4" />
-              <p className="text-gray-400 text-sm leading-relaxed">
+              <p className="text-[#737373] dark:text-gray-400 text-sm leading-relaxed">
                 Entreprise de construction et rénovation tous corps d'état,
                 implantée en Guadeloupe. Notre équipe intervient rapidement sur
                 l'ensemble du territoire pour tous vos projets BTP.
@@ -167,7 +167,7 @@ export default function ContactPage() {
 
             {/* Quick contact buttons */}
             <div className="space-y-3">
-              <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">
+              <p className="text-xs text-[#9E9E9E] dark:text-gray-500 uppercase tracking-widest font-semibold">
                 Contact rapide
               </p>
               <a
@@ -175,24 +175,24 @@ export default function ContactPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="contact-page-whatsapp"
-                className="flex items-center gap-3 w-full p-4 bg-[#121212] border border-white/5 hover:border-green-500/30 transition-all rounded-sm group"
+                className="flex items-center gap-3 w-full p-4 bg-white dark:bg-[#121212] border border-black/7 dark:border-white/5 hover:border-green-500/30 transition-all rounded-sm group"
               >
                 <div className="w-9 h-9 bg-green-500/10 flex items-center justify-center rounded-sm group-hover:bg-green-500/20 transition-colors flex-shrink-0">
                   <span className="text-green-400"><WHATSAPP_SVG /></span>
                 </div>
                 <div>
-                  <p className="text-white text-sm font-medium">WhatsApp</p>
-                  <p className="text-gray-500 text-xs">Devis gratuit · Réponse rapide</p>
+                  <p className="text-[#1A1A1A] dark:text-white text-sm font-medium">WhatsApp</p>
+                  <p className="text-[#9E9E9E] dark:text-gray-500 text-xs">Devis gratuit · Réponse rapide</p>
                 </div>
               </a>
             </div>
 
             {/* Espace client promo */}
             <div className="p-5 bg-[#D4AF37]/5 border border-[#D4AF37]/15 rounded-sm">
-              <p className="font-outfit font-semibold text-white text-sm mb-1">
+              <p className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-sm mb-1">
                 Vous êtes déjà client ?
               </p>
-              <p className="text-gray-400 text-xs leading-relaxed mb-3">
+              <p className="text-[#737373] dark:text-gray-400 text-xs leading-relaxed mb-3">
                 Accédez à votre espace personnel pour consulter vos devis,
                 factures et effectuer vos paiements.
               </p>
@@ -207,16 +207,16 @@ export default function ContactPage() {
 
           {/* Right — Form */}
           <div className="lg:col-span-3">
-            <div className="bg-[#121212] border border-white/5 p-7 md:p-10 rounded-sm">
+            <div className="bg-white dark:bg-[#121212] border border-black/7 dark:border-white/5 p-7 md:p-10 rounded-sm shadow-sm dark:shadow-none">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-9 h-9 bg-[#D4AF37]/10 flex items-center justify-center rounded-sm">
                   <MessageSquare size={16} className="text-[#D4AF37]" />
                 </div>
                 <div>
-                  <h3 className="font-outfit font-bold text-white text-lg leading-tight">
+                  <h3 className="font-outfit font-bold text-[#1A1A1A] dark:text-white text-lg leading-tight">
                     Formulaire de contact
                   </h3>
-                  <p className="text-gray-500 text-xs">Réponse sous 24h — Devis gratuit</p>
+                  <p className="text-[#9E9E9E] dark:text-gray-500 text-xs">Réponse sous 24h — Devis gratuit</p>
                 </div>
               </div>
 
@@ -245,60 +245,60 @@ export default function ContactPage() {
               <form onSubmit={handleSubmit} data-testid="contact-page-form" className="space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-gray-400 uppercase tracking-wider mb-1.5">Nom complet *</label>
+                    <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Nom complet *</label>
                     <input
                       type="text" name="name" value={form.name} onChange={handleChange} required
                       placeholder="Votre nom" data-testid="contact-page-name"
-                      className="w-full bg-white/5 border border-white/10 text-white placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm"
+                      className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-400 uppercase tracking-wider mb-1.5">Email *</label>
+                    <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Email *</label>
                     <input
                       type="email" name="email" value={form.email} onChange={handleChange} required
                       placeholder="votre@email.com" data-testid="contact-page-email"
-                      className="w-full bg-white/5 border border-white/10 text-white placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm"
+                      className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm"
                     />
                   </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-gray-400 uppercase tracking-wider mb-1.5">Téléphone</label>
+                    <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Téléphone</label>
                     <input
                       type="tel" name="phone" value={form.phone} onChange={handleChange}
                       placeholder="0690 XX XX XX" data-testid="contact-page-phone-input"
-                      className="w-full bg-white/5 border border-white/10 text-white placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm"
+                      className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-400 uppercase tracking-wider mb-1.5">Commune</label>
+                    <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Commune</label>
                     <input
                       type="text" name="commune" value={form.commune} onChange={handleChange}
                       placeholder="Votre commune" data-testid="contact-page-commune"
-                      className="w-full bg-white/5 border border-white/10 text-white placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm"
+                      className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm"
                     />
                   </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-gray-400 uppercase tracking-wider mb-1.5">Sujet *</label>
+                    <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Sujet *</label>
                     <select
                       name="subject" value={form.subject} onChange={handleChange} required
                       data-testid="contact-page-subject"
-                      className="w-full bg-[#1A1A1A] border border-white/10 text-white px-4 py-2.5 text-sm rounded-sm"
+                      className="w-full bg-[#F5F4F0] dark:bg-[#1A1A1A] border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white px-4 py-2.5 text-sm rounded-sm"
                     >
                       <option value="">Choisir un sujet</option>
                       {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-400 uppercase tracking-wider mb-1.5">Prestation</label>
+                    <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Prestation</label>
                     <select
                       name="service" value={form.service} onChange={handleChange}
                       data-testid="contact-page-service"
-                      className="w-full bg-[#1A1A1A] border border-white/10 text-white px-4 py-2.5 text-sm rounded-sm"
+                      className="w-full bg-[#F5F4F0] dark:bg-[#1A1A1A] border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white px-4 py-2.5 text-sm rounded-sm"
                     >
                       <option value="">Sélectionner (optionnel)</option>
                       {SERVICES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -307,12 +307,12 @@ export default function ContactPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-400 uppercase tracking-wider mb-1.5">Message *</label>
+                  <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Message *</label>
                   <textarea
                     name="message" value={form.message} onChange={handleChange} required rows={5}
                     placeholder="Décrivez votre projet, vos besoins, délais souhaités..."
                     data-testid="contact-page-message"
-                    className="w-full bg-white/5 border border-white/10 text-white placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm resize-none"
+                    className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm resize-none"
                   />
                 </div>
 
@@ -320,11 +320,11 @@ export default function ContactPage() {
                 <label className="flex items-center gap-3 cursor-pointer group">
                   <div
                     onClick={() => setSendViaWhatsApp(!sendViaWhatsApp)}
-                    className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 flex items-center px-0.5 ${sendViaWhatsApp ? "bg-green-500" : "bg-white/10"}`}
+                    className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 flex items-center px-0.5 ${sendViaWhatsApp ? "bg-green-500" : "bg-black/10 dark:bg-white/10"}`}
                   >
                     <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${sendViaWhatsApp ? "translate-x-5" : "translate-x-0"}`} />
                   </div>
-                  <span className="text-gray-400 text-sm group-hover:text-gray-200 transition-colors">
+                  <span className="text-[#737373] dark:text-gray-400 text-sm group-hover:text-[#1A1A1A] dark:group-hover:text-gray-200 transition-colors">
                     Envoyer aussi via WhatsApp
                   </span>
                 </label>
@@ -339,7 +339,7 @@ export default function ContactPage() {
                   {loading ? "Envoi en cours..." : "Envoyer mon message"}
                 </button>
 
-                <p className="text-center text-xs text-gray-600">
+                <p className="text-center text-xs text-[#ADADAD] dark:text-gray-600">
                   Vos données sont traitées conformément au RGPD · Réponse garantie sous 24h
                 </p>
               </form>

@@ -10,10 +10,15 @@ html {
 
 body {
   font-family: 'Manrope', sans-serif;
-  background-color: #0A0A0A;
-  color: #FFFFFF;
+  background-color: #FAFAF8;
+  color: #1A1A1A;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html.dark body {
+  background-color: #0A0A0A;
+  color: #FFFFFF;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -100,6 +105,11 @@ h1, h2, h3, h4, h5, h6 {
 .glass-card {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  background: rgba(250, 250, 248, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+html.dark .glass-card {
   background: rgba(18, 18, 18, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -136,6 +146,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::-webkit-scrollbar-track {
+  background: #FAFAF8;
+}
+
+html.dark ::-webkit-scrollbar-track {
   background: #0A0A0A;
 }
 
@@ -192,5 +206,9 @@ input:focus, textarea:focus, select:focus {
 /* Mobile menu */
 .mobile-menu {
   backdrop-filter: blur(30px);
+  background: rgba(250, 250, 248, 0.97);
+}
+
+html.dark .mobile-menu {
   background: rgba(10, 10, 10, 0.95);
 }

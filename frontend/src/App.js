@@ -1,6 +1,7 @@
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "@/components/auth/Login";
 import Register from "@/components/auth/Register";
@@ -35,7 +36,7 @@ function AutoRedirect() {
 import { SEO } from "@/components/SEO";
 
 const Home = () => (
-  <div className="bg-[#0A0A0A] min-h-screen">
+  <div className="bg-[#FAFAF8] dark:bg-[#0A0A0A] min-h-screen">
     <SEO
       title="Entreprise de Constructions BTP"
       description="E3C, votre entreprise de construction BTP en Guadeloupe. Maçonnerie, toiture, rénovation, carrelage, peinture. Devis gratuit en ligne."
@@ -76,9 +77,11 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </ThemeProvider>
       </BrowserRouter>
     </div>
   );

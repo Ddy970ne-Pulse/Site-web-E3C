@@ -20,35 +20,35 @@ export default function Services({ whatsapp }) {
   const navigate = useNavigate();
 
   return (
-    <section id="services" data-testid="services-section" className="py-16 md:py-24 bg-[#0A0A0A]">
+    <section id="services" data-testid="services-section" className="py-16 md:py-24 bg-[#FAFAF8] dark:bg-[#0A0A0A]">
       <div className="max-w-7xl mx-auto px-6 md:px-12">
 
-        {/* Header — 2 colonnes : titre à gauche, CTA à droite */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
           <div>
             <p className="text-[#D4AF37] text-xs font-bold uppercase tracking-widest mb-2">
               Nos Prestations
             </p>
-            <h2 className="font-outfit font-bold text-3xl md:text-4xl text-white mb-3">
+            <h2 className="font-outfit font-bold text-3xl md:text-4xl text-[#1A1A1A] dark:text-white mb-3">
               Tous travaux BTP
             </h2>
             <div className="section-divider" />
           </div>
-          <p className="text-gray-400 text-sm max-w-sm leading-relaxed md:text-right">
+          <p className="text-[#737373] dark:text-gray-400 text-sm max-w-sm leading-relaxed md:text-right">
             Construction neuve, rénovation, second œuvre — E3C intervient sur
             l'ensemble des corps de métier en Guadeloupe.
           </p>
         </div>
 
         {/* Grille compacte */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-white/5 border border-white/5 rounded-sm overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-black/6 dark:bg-white/5 border border-black/6 dark:border-white/5 rounded-sm overflow-hidden">
           {services.map((service, i) => {
             const Icon = service.icon;
             return (
               <div
                 key={service.title}
                 data-testid={`service-card-${i}`}
-                className="group bg-[#0E0E0E] hover:bg-[#141414] transition-colors duration-200 p-5 flex items-start gap-4"
+                className="group bg-white hover:bg-[#F8F7F4] dark:bg-[#0E0E0E] dark:hover:bg-[#141414] transition-colors duration-200 p-5 flex items-start gap-4"
               >
                 {/* Icône */}
                 <div className="w-9 h-9 flex-shrink-0 bg-[#D4AF37]/8 border border-[#D4AF37]/15 flex items-center justify-center rounded-sm mt-0.5 group-hover:bg-[#D4AF37]/15 transition-colors">
@@ -56,10 +56,10 @@ export default function Services({ whatsapp }) {
                 </div>
                 {/* Texte */}
                 <div className="min-w-0">
-                  <h3 className="font-outfit font-semibold text-white text-sm leading-snug mb-1">
+                  <h3 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-sm leading-snug mb-1">
                     {service.title}
                   </h3>
-                  <p className="text-gray-500 text-xs leading-relaxed">
+                  <p className="text-[#9E9E9E] dark:text-gray-500 text-xs leading-relaxed">
                     {service.desc}
                   </p>
                 </div>
@@ -69,8 +69,8 @@ export default function Services({ whatsapp }) {
         </div>
 
         {/* CTA bas de section */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-white/5">
-          <p className="text-gray-500 text-sm">
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-black/7 dark:border-white/5">
+          <p className="text-[#9E9E9E] dark:text-gray-500 text-sm">
             Votre projet ne rentre pas dans une case ? Décrivez-le nous.
           </p>
           <div className="flex items-center gap-3 flex-shrink-0">

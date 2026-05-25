@@ -24,7 +24,7 @@ export default function Footer({ whatsapp }) {
   return (
     <footer
       data-testid="footer"
-      className="bg-[#050505] border-t border-white/5 pt-16 md:pt-20 pb-8"
+      className="bg-[#EEE9DF] dark:bg-[#050505] border-t border-black/8 dark:border-white/5 pt-16 md:pt-20 pb-8"
     >
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-14">
@@ -36,13 +36,13 @@ export default function Footer({ whatsapp }) {
                 <span className="font-outfit font-black text-black text-sm">E3C</span>
               </div>
               <div>
-                <p className="font-outfit font-bold text-white text-base group-hover:text-[#D4AF37] transition-colors">
+                <p className="font-outfit font-bold text-[#1A1A1A] dark:text-white text-base group-hover:text-[#D4AF37] transition-colors">
                   E3C — Entreprise de constructions
                 </p>
-                <p className="text-xs text-gray-500 uppercase tracking-widest">Guadeloupe · BTP</p>
+                <p className="text-xs text-[#9E9E9E] dark:text-gray-500 uppercase tracking-widest">Guadeloupe · BTP</p>
               </div>
             </Link>
-            <p className="text-gray-400 text-sm leading-relaxed mb-5">
+            <p className="text-[#737373] dark:text-gray-400 text-sm leading-relaxed mb-5">
               Votre partenaire de confiance pour tous vos travaux de construction
               et rénovation en Guadeloupe. Qualité, réactivité et expertise locale.
             </p>
@@ -60,10 +60,10 @@ export default function Footer({ whatsapp }) {
 
             {/* Account links */}
             <div className="space-y-2">
-              <Link to="/connexion" className="flex items-center gap-2 text-gray-400 hover:text-[#D4AF37] text-xs transition-colors">
+              <Link to="/connexion" className="flex items-center gap-2 text-[#737373] dark:text-gray-400 hover:text-[#D4AF37] text-xs transition-colors">
                 <LogIn size={12} /> Se connecter à l'espace client
               </Link>
-              <Link to="/inscription" className="flex items-center gap-2 text-gray-400 hover:text-[#D4AF37] text-xs transition-colors">
+              <Link to="/inscription" className="flex items-center gap-2 text-[#737373] dark:text-gray-400 hover:text-[#D4AF37] text-xs transition-colors">
                 <User size={12} /> Créer un compte client
               </Link>
             </div>
@@ -71,7 +71,7 @@ export default function Footer({ whatsapp }) {
 
           {/* Navigation */}
           <div>
-            <h4 className="font-outfit font-semibold text-white text-sm uppercase tracking-widest mb-4">
+            <h4 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-sm uppercase tracking-widest mb-4">
               Navigation
             </h4>
             <ul className="space-y-2.5">
@@ -84,14 +84,14 @@ export default function Footer({ whatsapp }) {
               ].map((item) => (
                 <li key={item.label}>
                   {item.to ? (
-                    <Link to={item.to} className="text-gray-400 hover:text-[#D4AF37] text-sm transition-colors">{item.label}</Link>
+                    <Link to={item.to} className="text-[#737373] dark:text-gray-400 hover:text-[#D4AF37] text-sm transition-colors">{item.label}</Link>
                   ) : (
-                    <button onClick={() => scrollTo(item.scroll)} className="text-gray-400 hover:text-[#D4AF37] text-sm transition-colors">{item.label}</button>
+                    <button onClick={() => scrollTo(item.scroll)} className="text-[#737373] dark:text-gray-400 hover:text-[#D4AF37] text-sm transition-colors">{item.label}</button>
                   )}
                 </li>
               ))}
               <li>
-                <Link to="/contact" className="text-gray-400 hover:text-[#D4AF37] text-sm transition-colors">
+                <Link to="/contact" className="text-[#737373] dark:text-gray-400 hover:text-[#D4AF37] text-sm transition-colors">
                   Contact
                 </Link>
               </li>
@@ -100,28 +100,28 @@ export default function Footer({ whatsapp }) {
 
           {/* Services */}
           <div>
-            <h4 className="font-outfit font-semibold text-white text-sm uppercase tracking-widest mb-4">
+            <h4 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-sm uppercase tracking-widest mb-4">
               Prestations
             </h4>
             <ul className="space-y-2">
               {services.map((s) => (
-                <li key={s} className="text-gray-500 text-xs">{s}</li>
+                <li key={s} className="text-[#9E9E9E] dark:text-gray-500 text-xs">{s}</li>
               ))}
             </ul>
           </div>
 
           {/* Contact info */}
           <div>
-            <h4 className="font-outfit font-semibold text-white text-sm uppercase tracking-widest mb-4">
+            <h4 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-sm uppercase tracking-widest mb-4">
               Coordonnées
             </h4>
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
                 <MapPin size={13} className="text-[#D4AF37] mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-xs text-gray-500 mb-0.5">Zone d'intervention</p>
-                  <p className="text-white text-sm">Guadeloupe (971)</p>
-                  <p className="text-gray-500 text-xs">Toutes communes</p>
+                  <p className="text-xs text-[#9E9E9E] dark:text-gray-500 mb-0.5">Zone d'intervention</p>
+                  <p className="text-[#1A1A1A] dark:text-white text-sm">Guadeloupe (971)</p>
+                  <p className="text-[#9E9E9E] dark:text-gray-500 text-xs">Toutes communes</p>
                 </div>
               </li>
             </ul>
@@ -137,17 +137,17 @@ export default function Footer({ whatsapp }) {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-          <span className="font-outfit font-black text-4xl text-white/5 select-none">E3C</span>
+        <div className="border-t border-black/8 dark:border-white/5 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
+          <span className="font-outfit font-black text-4xl text-black/5 dark:text-white/5 select-none">E3C</span>
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-            <Link to="/mentions-legales" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">Mentions légales</Link>
-            <span className="text-gray-700 text-xs">·</span>
-            <Link to="/cgv" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">CGV</Link>
-            <span className="text-gray-700 text-xs">·</span>
-            <span className="text-gray-600 text-xs">RGPD</span>
+            <Link to="/mentions-legales" className="text-[#ADADAD] dark:text-gray-600 hover:text-[#737373] dark:hover:text-gray-400 text-xs transition-colors">Mentions légales</Link>
+            <span className="text-[#CCCCCC] dark:text-gray-700 text-xs">·</span>
+            <Link to="/cgv" className="text-[#ADADAD] dark:text-gray-600 hover:text-[#737373] dark:hover:text-gray-400 text-xs transition-colors">CGV</Link>
+            <span className="text-[#CCCCCC] dark:text-gray-700 text-xs">·</span>
+            <span className="text-[#ADADAD] dark:text-gray-600 text-xs">RGPD</span>
           </div>
           <div className="text-center md:text-right">
-            <p className="text-gray-600 text-xs">
+            <p className="text-[#ADADAD] dark:text-gray-600 text-xs">
               &copy; {new Date().getFullYear()} E3C — Entreprise de Constructions · Guadeloupe (971)
             </p>
           </div>
