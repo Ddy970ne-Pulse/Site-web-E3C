@@ -98,6 +98,7 @@
 - v5.0: Backend 100% | Frontend 100% (iteration_5.json)
 - v6.0: Frontend 100% — 17/17 tests (iteration_6.json)
 - v7.0: Backend 100% + Frontend 100% — 26/26 tests (iteration_7.json)
+- v8.0: Backend 100% + Frontend 100% — 22/22 tests (iteration_8.json)
 
 ---
 

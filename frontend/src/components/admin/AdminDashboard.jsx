@@ -704,6 +704,11 @@ export default function AdminDashboard() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-xs text-gray-500">{new Date(r.created_at).toLocaleDateString("fr-FR")}</p>
+                      {r.estimated_total_ttc > 0 && (
+                        <p className="text-[#D4AF37] font-bold text-sm mt-1" data-testid={`estimated-ttc-${r.id}`}>
+                          ~ {r.estimated_total_ttc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} € TTC
+                        </p>
+                      )}
                       <span className={`text-xs font-semibold px-2 py-1 rounded-sm mt-1 inline-block ${r.status === "new" ? "bg-blue-400/10 text-blue-400" : "bg-gray-400/10 text-gray-400"}`}>
                         {r.status === "new" ? "Nouveau" : r.status}
                       </span>
