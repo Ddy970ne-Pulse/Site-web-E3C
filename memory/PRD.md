@@ -1,125 +1,115 @@
-# PRD - Site Web E3C Entreprise de Constructions
+# E3C — Entreprise de Constructions — PRD
 
-## Entreprise
-**Nom**: E3C — Entreprise de Constructions
-**Secteur**: BTP - Tous travaux du Bâtiment et Travaux Publics
-**Localisation**: Guadeloupe (971)
-**Contact**: 0690 44 97 14 (WhatsApp + Téléphone)
-
----
+## Contexte
+Site web professionnel pour E3C, entreprise BTP en Guadeloupe (971).
+Pas de numéros de téléphone affichés publiquement sur le site.
 
 ## Architecture
-- **Frontend**: React + Tailwind CSS + Shadcn UI | Routes: /, /contact, /connexion, /inscription, /admin, /espace-client
-- **Backend**: FastAPI + MongoDB (Motor) | Auth JWT + bcrypt
-- **Paiements**: Stripe Checkout (test → prod configurable)
-- **Emails**: Brevo (RGPD, France) — configurable via BREVO_API_KEY
-- **Style**: Dark Premium (#0A0A0A + accents or #D4AF37) | Fonts: Outfit + Manrope
+- **Frontend**: React + Tailwind CSS (darkMode: ["class"]) + Shadcn UI + React Router
+- **Backend**: FastAPI + MongoDB (Motor) + JWT auth
+- **Paiement**: Stripe (intégration prévue, clé utilisateur requise)
+- **Email**: Brevo (différé, clé utilisateur requise)
+
+```
+/app/
+├── backend/
+│   ├── server.py              # FastAPI — auth, quotes, pricing, gallery, testimonials
+│   ├── requirements.txt
+│   └── .env
+├── frontend/
+│   ├── src/
+│   │   ├── contexts/
+│   │   │   ├── AuthContext.js  # JWT auth context
+│   │   │   └── ThemeContext.js # Dark/Light theme toggle (localStorage: 'e3c-theme')
+│   │   ├── components/
+│   │   │   ├── admin/          # AdminDashboard, PricingTab, GalleryTab, TestimonialsTab
+│   │   │   ├── auth/           # Login.jsx, Register.jsx
+│   │   │   ├── client/         # ClientDashboard
+│   │   │   └── ...             # Navbar, Hero, Services, Gallery, FAQ, Testimonials, ZoneIntervention, Contact, Footer, Values
+│   │   ├── pages/              # ContactPage, DevisWizard (7 steps), MentionsLegales, CGV
+│   │   ├── App.js
+│   │   └── App.css
+│   ├── public/                 # index.html, sitemap.xml, robots.txt
+│   ├── tailwind.config.js      # darkMode: ["class"]
+│   ├── package.json
+│   └── .env
+└── memory/
+    ├── PRD.md
+    ├── test_credentials.md
+    ├── CHANGELOG.md
+    └── ROADMAP.md
+```
+
+## Schéma BD
+- `users`: {email, password_hash, role, name, phone, created_at}
+- `pricing_grid`: {category, description, unit, unit_price_ht, tva_rate, active}
+- `quote_requests`: {client_id, project_type, services, description, commune, estimated_lines, total_ht, total_ttc, status}
+- `gallery_images`: {url, category, title, label, tag}
+- `testimonials`: {author_name, content, commune, service, stars, status}
+- `invoices`: {quote_id, client_id, amount, stripe_session_id, status}
+
+## Comptes de test
+- **Admin**: admin@e3c-construction.com / E3C@Admin2026
+- Route admin: /admin
+- Route client: /espace-client
+
+## Endpoints API clés
+- POST /api/auth/login
+- POST /api/auth/register
+- GET/POST/PUT/DELETE /api/pricing-grid
+- POST /api/quote-requests
+- GET /api/quote-requests (admin)
+- GET/POST /api/gallery
+- GET/POST /api/testimonials
+- GET /api/admin/stats
 
 ---
 
-## Ce qui a été implémenté (v3.0 - Avril 2026)
+## Fonctionnalités implémentées
 
-## Ce qui a été implémenté (v4.0 - Avril 2026)
+### Phase 1 — Site vitrine public
+- [x] Hero avec image construction (dark overlay, conservé en mode clair)
+- [x] Section Services (9 prestations BTP)
+- [x] Section Values / Pourquoi nous choisir
+- [x] Gallery dynamique (admin + images statiques Unsplash)
+- [x] Testimonials avec formulaire de soumission + validation admin
+- [x] FAQ accordéon
+- [x] Zone d'intervention (carte OpenStreetMap, 20 communes)
+- [x] Contact (WhatsApp + formulaire)
+- [x] Footer complet avec liens légaux
 
-### Site vitrine (v1.0)
-- Navbar hamburger universel (drawer slide-out tous écrans)
-- Hero cinématique + Stats dorées
-- Services BTP (9 prestations bento grid)
-- Valeurs (6 cartes)
-- Galerie photos avec lightbox
-- Zone d'intervention Guadeloupe (20+ communes)
-- Section contact homepage (2 canaux: WhatsApp, Formulaire — téléphone retiré)
-- FAQ accordion (7 questions)
-- Footer complet avec liens compte client (téléphone retiré)
+### Phase 2 — SEO & Légal
+- [x] SEO dynamique (Open Graph, meta tags)
+- [x] sitemap.xml
+- [x] robots.txt
+- [x] Pages légales: Mentions légales, CGV
 
-## Ce qui a été implémenté (v5.0 - Avril 2026)
+### Phase 3 — Authentification
+- [x] Login / Register (JWT)
+- [x] Admin portal (/admin)
+- [x] Client portal (/espace-client)
+- [x] Création compte admin (seed script)
 
-### Modifications v4.0
-- Icônes "Connexion" et "Créer un compte" déplacées dans le header (hors menu hamburger)
-- Section témoignages clients ajoutée (6 avis, section #testimonials)
-- Numéro de téléphone entièrement supprimé de toutes les pages visibles
-- Wizard Devis en 6 étapes : /devis — POST /api/quote-requests
+### Phase 4 — Business Logic
+- [x] Grille tarifaire CRUD admin (PricingTab)
+- [x] Devis Wizard 7 étapes (type projet → services → estimation → description → commune → budget/délai → coordonnées)
+- [x] Intégration grille tarifaire dans le wizard pour estimation live TTC/HT
+- [x] Soumission des demandes de devis
+- [x] Admin dashboard avec analytics (stats)
 
-### Modifications v5.0
-- Section Prestations redesignée : grille compacte 3×3 (icône inline + titre + desc, p-5, gap-px)
-- Section Valeurs redesignée : même style compact que Prestations (cohérence visuelle)
-- Zone d'intervention : carte OpenStreetMap interactive (iframe, filtre CSS dark, badge overlay)
-- Admin dashboard enrichi : onglet Analytiques (CA total, CA mensuel, taux de conversion, barres), onglet Demandes wizard
-- Pages légales : /mentions-legales + /cgv + liens dans le footer
+### Phase 5 — UI/UX Thème
+- [x] **Dark Mode** (thème sombre par défaut, noir #0A0A0A)
+- [x] **Light Mode** (thème crème/beige chaleureux, fond #FAFAF8)
+- [x] **Bouton bascule** Dark/Light dans la Navbar (icône Soleil/Lune)
+- [x] Bascule aussi dans le menu hamburger (mobile)
+- [x] Persistance du thème dans localStorage ('e3c-theme')
+- [x] Thème sombre par défaut au premier chargement
 
-### Page Contact dédiée /contact (v3.0)
-- Hero "Parlons de votre projet"
-- 4 infos cards (Téléphone, WhatsApp, Zone, Disponibilité)
-- Formulaire complet (nom, email, téléphone, commune, sujet, prestation, message)
-- WhatsApp comme option toggle (pas obligation)
-- Sauvegarde en DB + option envoi WhatsApp
-- Mention RGPD
-
-### Authentification (v2.0)
-- JWT + bcrypt, cookies httpOnly sécurisés
-- Rôles: admin / client
-- Admin auto-seedé au démarrage
-- Inscription client: /inscription
-- Connexion: /connexion
-- Redirection automatique selon le rôle
-
-### Système Devis (v2.0)
-- Création par l'admin avec lignes de postes (desc, qté, prix HT, TVA 8.5%)
-- Numérotation auto: DEV-YYYY-NNN
-- Workflow: draft → sent → accepted/refused → converted
-- Signature client "bon pour accord" dans espace perso
-- Génération PDF téléchargeable (reportlab)
-- Notifications email Brevo (optionnel)
-
-### Système Factures (v2.0)
-- Conversion depuis devis accepté
-- Numérotation auto: FAC-YYYY-NNN
-- Définition tranches de paiement par admin (libellé, montant, échéance)
-- Validation: sum tranches = total TTC
-- Génération PDF
-
-### Paiements Stripe (v2.0)
-- Stripe Checkout 3D Secure (SCA conforme UE)
-- Paiement tranche par tranche
-- Vérification statut via polling + webhook
-- Historique transactions MongoDB
-
-### Espaces personnels
-- Admin (/admin): Dashboard stats, Clients, Devis, Factures, Paiements
-- Client (/espace-client): Mes Devis (signer/refuser), Mes Factures (payer par tranches)
+### Corrections de bugs
+- [x] Suppression de tous les numéros de téléphone publics
+- [x] Mise à jour nom entreprise "E3C — Entreprise de constructions"
+- [x] Correction Step 4 DevisWizard (commune) manquant dans le rendu
 
 ---
 
-## Résultats des tests
-- v1.0: Backend 100% | Frontend 95%
-- v2.0: Backend 100% | Frontend 100%
-- v3.0: Backend 100% | Frontend 100%
-- v4.0: Backend 100% | Frontend 100% (iteration_4.json)
-- v5.0: Backend 100% | Frontend 100% (iteration_5.json)
-- v6.0: Frontend 100% — 17/17 tests (iteration_6.json)
-- v7.0: Backend 100% + Frontend 100% — 26/26 tests (iteration_7.json)
-- v8.0: Backend 100% + Frontend 100% — 22/22 tests (iteration_8.json)
-
----
-
-## Backlog prioritaire
-
-### P0 — À faire en priorité
-- [ ] Logo E3C définitif (remplace initiales stylisées)
-- [ ] Vraies photos de chantiers dans la galerie
-- [ ] Adresse email professionnelle
-- [ ] Compte Stripe réel (remplacer sk_test_emergent)
-- [ ] Compte Brevo → BREVO_API_KEY pour activer les emails
-
-### P1 — Amélioration
-- [ ] Intégration Brevo emails transactionnels (besoin clé API BREVO_API_KEY)
-- [x] Google Maps dans zone d'intervention — OpenStreetMap v5.0
-- [ ] SEO avancé (sitemap.xml, Open Graph, meta pages) ✅ v6.0
-- [x] Galerie avec filtres par catégorie ✅ v6.0
-- [x] Mentions légales / CGV — v5.0
-
-### P2 — Évolution
-- [ ] Galerie avec filtres par catégorie
-- [ ] Blog actualités BTP
-- [ ] Espace client: historique complet paiements
-- [ ] Notifications push
+*Dernière mise à jour: 25 Mai 2026*
