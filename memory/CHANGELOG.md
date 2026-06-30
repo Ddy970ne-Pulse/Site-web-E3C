@@ -38,6 +38,37 @@
 
 ---
 
+## [2026-06-30] — P1 Conversion 1-click + P2 Acomptes + Refonte PDF
+
+### Ajouté
+- **P1**: Endpoint `POST /api/quote-requests/{id}/to-invoice` — conversion directe demande de devis → facture
+- **P1**: Bouton "Créer Facture" dans l'onglet "Demandes devis" de l'admin (data-testid: `convert-request-{id}`)
+- **P2**: Modèles d'acomptes prédéfinis dans InvoiceDetail (100%, 50/50, 30/70, 30/30/40, 1/3·1/3·1/3) avec auto-calcul des montants et dates suggérées
+- **Disclaimer estimatif**: Bannière "Estimation prévisionnelle, non contractuelle" dans DevisWizard (étapes 2 et 6), portail client (vue devis), et PDF devis
+
+### Modifié
+- **PDF redesign complet** (server.py `generate_invoice_pdf` + `generate_quote_pdf`):
+  - En-tête 2 colonnes: logo E3C gauche + numéro/date sur fond sombre droite
+  - Séparateur or
+  - Bloc "FACTURER À / ÉTABLI POUR" avec fond gris clair
+  - Tableau prestations: header foncé, lignes alternées, montants alignés à droite
+  - Bloc totaux right-aligned avec fond ivoire pour TOTAL TTC
+  - Calendrier de règlement tabulaire
+  - Section signature (devis)
+  - Pied de page avec règle et coordonnées
+- **AdminDashboard**: Statut "Converti" (badge violet) pour les demandes déjà converties
+
+### Corrigé
+- **Bug Race condition DevisWizard**: `data.name` et `data.email` restaient vides si `user` était `undefined` au montage → `useEffect` synchronise les champs dès que l'auth résout
+- **Bug 401 ClientDashboard**: `fetchData` sans gestion d'erreur → uncaught 401 bloquait l'UI → catch block redirige vers `/connexion`
+
+### Tests
+- Iteration 10: P1+P2+PDF — 100% (9/9)
+- Iteration 11: Disclaimer — 100% (4/4)
+- Iteration 12: Bugs auth/wizard — 100% (6/6)
+
+---
+
 ## [2026-05-XX] — Grille tarifaire & Devis Wizard
 
 ### Ajouté

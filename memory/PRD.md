@@ -43,10 +43,11 @@ Pas de numéros de téléphone affichés publiquement sur le site.
 ## Schéma BD
 - `users`: {email, password_hash, role, name, phone, created_at}
 - `pricing_grid`: {category, description, unit, unit_price_ht, tva_rate, active}
-- `quote_requests`: {client_id, project_type, services, description, commune, estimated_lines, total_ht, total_ttc, status}
+- `quote_requests`: {id, client_id, project_type, services, description, commune, address, line_items, estimated_total_ht, estimated_total_ttc, status, invoice_id}
+- `quotes`: {id, quote_number, client_id, client_name, client_email, client_phone, line_items, total_ht, total_tva, total_ttc, status, valid_until, notes}
+- `invoices`: {id, invoice_number, quote_id, quote_number, quote_request_id, client_id, client_name, client_email, client_phone, client_address, project_description, line_items, total_ht, total_tva, total_ttc, status, payment_tranches, stripe details}
 - `gallery_images`: {url, category, title, label, tag}
 - `testimonials`: {author_name, content, commune, service, stars, status}
-- `invoices`: {quote_id, client_id, amount, stripe_session_id, status}
 
 ## Comptes de test
 - **Admin**: admin@e3c-construction.com / E3C@Admin2026
