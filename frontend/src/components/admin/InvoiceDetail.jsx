@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import { Plus, Trash2, Save, ArrowLeft, FileText } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, FileText, Zap } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -11,6 +11,14 @@ const emptyTranche = (index) => ({
   due_date: "",
   status: "pending",
 });
+
+const PRESETS = [
+  { id: "full",     label: "100%",       parts: [{ pct: 100,   days: 30, name: "Paiement unique" }] },
+  { id: "50-50",   label: "50 / 50",    parts: [{ pct: 50,    days: 7,  name: "Acompte 50%" },   { pct: 50,    days: 45, name: "Solde 50%" }] },
+  { id: "30-70",   label: "30 / 70",    parts: [{ pct: 30,    days: 7,  name: "Acompte 30%" },   { pct: 70,    days: 45, name: "Solde 70%" }] },
+  { id: "30-30-40",label: "30/30/40",   parts: [{ pct: 30,    days: 7,  name: "Acompte 30%" },   { pct: 30,    days: 30, name: "2ème tranche" }, { pct: 40, days: 60, name: "Solde 40%" }] },
+  { id: "33-33-33",label: "1/3 · 1/3 · 1/3", parts: [{ pct: 33.34, days: 7,  name: "1ère tranche" }, { pct: 33.33, days: 30, name: "2ème tranche" }, { pct: 33.33, days: 60, name: "3ème tranche" }] },
+];
 
 export default function InvoiceDetail({ invoice, onBack }) {
   const [inv, setInv] = useState(invoice);
@@ -25,6 +33,29 @@ export default function InvoiceDetail({ invoice, onBack }) {
     const t = [...tranches];
     t[i] = { ...t[i], [k]: k === "amount" ? parseFloat(v) || 0 : v };
     setTranches(t);
+  };
+
+  const applyPreset = (preset) => {
+    const total = inv.total_ttc;
+    const today = new Date();
+    let remaining = total;
+    const newTranches = preset.parts.map((p, idx) => {
+      const due = new Date(today);
+      due.setDate(today.getDate() + p.days);
+      const isLast = idx === preset.parts.length - 1;
+      const amount = isLast
+        ? Math.round(remaining * 100) / 100
+        : Math.round(total * p.pct / 100 * 100) / 100;
+      if (!isLast) remaining -= amount;
+      return {
+        id: crypto.randomUUID(),
+        label: p.name,
+        amount,
+        due_date: due.toISOString().split("T")[0],
+        status: "pending",
+      };
+    });
+    setTranches(newTranches);
   };
 
   const totalTranches = tranches.reduce((s, t) => s + (t.amount || 0), 0);
@@ -72,6 +103,24 @@ export default function InvoiceDetail({ invoice, onBack }) {
           <button onClick={addTranche} className="flex items-center gap-1 text-[#D4AF37] text-xs font-semibold hover:underline">
             <Plus size={13}/> Ajouter une tranche
           </button>
+        </div>
+
+        {/* Preset templates */}
+        <div className="mb-5 p-4 bg-white/2 border border-white/5 rounded-sm">
+          <p className="text-xs text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+            <Zap size={11} className="text-[#D4AF37]"/> Modèles d'acomptes
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {PRESETS.map(preset => (
+              <button
+                key={preset.id}
+                data-testid={`preset-${preset.id}`}
+                onClick={() => applyPreset(preset)}
+                className="px-3 py-1.5 text-xs font-semibold border border-white/10 text-gray-300 hover:border-[#D4AF37]/50 hover:text-[#D4AF37] transition-all rounded-sm">
+                {preset.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {msg && <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-3 mb-4 text-sm rounded-sm">{msg}</div>}

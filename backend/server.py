@@ -742,6 +742,121 @@ async def update_quote_request_status(req_id: str, request: Request):
     await db.quote_requests.update_one({"id": req_id}, {"$set": {"status": body.get("status", "viewed")}})
     return {"message": "Statut mis à jour"}
 
+@api_router.post("/quote-requests/{req_id}/to-invoice")
+async def convert_quote_request_to_invoice(req_id: str, request: Request):
+    await require_admin(request)
+    qr = await db.quote_requests.find_one({"id": req_id}, {"_id": 0})
+    if not qr:
+        raise HTTPException(404, "Demande de devis introuvable")
+    if qr.get("status") == "converted":
+        raise HTTPException(400, "Cette demande a déjà été convertie en facture")
+
+    raw_items = qr.get("line_items") or []
+    items = []
+    total_ht = 0.0
+    total_tva = 0.0
+
+    if raw_items:
+        for li in raw_items:
+            qty   = float(li.get("quantity", 1))
+            price = float(li.get("unit_price_ht", 0))
+            tva   = float(li.get("tva_rate", 8.5))
+            ht    = round(qty * price, 2)
+            t_    = round(ht * tva / 100, 2)
+            ttc   = round(ht + t_, 2)
+            items.append({
+                "description": li.get("description", ""),
+                "quantity": qty,
+                "unit_price": price,
+                "unit": li.get("unit", "forfait"),
+                "tva_rate": tva,
+                "total_ht": ht,
+                "total_tva": t_,
+                "total_ttc": ttc,
+            })
+            total_ht  += ht
+            total_tva += t_
+    else:
+        est_ht  = float(qr.get("estimated_total_ht", 0) or 0)
+        est_ttc = float(qr.get("estimated_total_ttc", 0) or 0)
+        if est_ht > 0:
+            total_ht  = est_ht
+            total_tva = round(est_ttc - est_ht, 2)
+            items = [{
+                "description": f'{qr.get("project_type","Travaux")} — {qr.get("description","")}',
+                "quantity": 1.0,
+                "unit_price": est_ht,
+                "unit": "forfait",
+                "tva_rate": 8.5,
+                "total_ht": est_ht,
+                "total_tva": round(est_ttc - est_ht, 2),
+                "total_ttc": est_ttc,
+            }]
+        else:
+            items = [{
+                "description": f'{qr.get("project_type","Travaux")} — {qr.get("description","")}',
+                "quantity": 1.0,
+                "unit_price": 0.0,
+                "unit": "forfait",
+                "tva_rate": 8.5,
+                "total_ht": 0.0,
+                "total_tva": 0.0,
+                "total_ttc": 0.0,
+            }]
+
+    total_ht  = round(total_ht, 2)
+    total_tva = round(total_tva, 2)
+    total_ttc = round(total_ht + total_tva, 2)
+
+    inv_num   = await next_invoice_number()
+    raw_desc  = f'{qr.get("project_type","").strip()} — {qr.get("description","").strip()}'
+    proj_desc = raw_desc.strip(" —").strip()
+
+    inv_doc = {
+        "id": str(uuid.uuid4()),
+        "invoice_number": inv_num,
+        "quote_id": None,
+        "quote_number": None,
+        "quote_request_id": req_id,
+        "client_id": qr.get("client_id"),
+        "client_name": qr.get("name", ""),
+        "client_email": qr.get("email", ""),
+        "client_phone": qr.get("phone", ""),
+        "client_address": qr.get("address", ""),
+        "project_description": proj_desc,
+        "line_items": items,
+        "total_ht": total_ht,
+        "total_tva": total_tva,
+        "total_ttc": total_ttc,
+        "status": "pending",
+        "payment_tranches": [],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.invoices.insert_one(inv_doc)
+    await db.quote_requests.update_one({"id": req_id}, {"$set": {
+        "status": "converted",
+        "invoice_id": inv_doc["id"],
+    }})
+    inv_doc.pop("_id", None)
+
+    if inv_doc.get("client_email"):
+        html = f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+        <div style="background:#D4AF37;padding:20px;text-align:center">
+          <h1 style="color:#000;margin:0">E3C Constructions</h1>
+        </div>
+        <div style="padding:30px;background:#f9f9f9">
+          <h2>Bonjour {inv_doc['client_name']},</h2>
+          <p>Votre facture <strong>{inv_num}</strong> a été générée suite à votre demande de devis.</p>
+          <p><strong>Montant total TTC : {total_ttc:.2f} €</strong></p>
+          <a href="{FRONTEND_URL}/espace-client" style="background:#D4AF37;color:#000;padding:12px 30px;text-decoration:none;font-weight:bold;display:inline-block;margin:20px 0;border-radius:4px">
+            Voir ma facture
+          </a>
+        </div></div>"""
+        await send_email(inv_doc["client_email"], f"Votre facture {inv_num} - E3C Constructions", html)
+
+    return inv_doc
+
 @api_router.get("/")
 async def root():
     return {"message": "E3C API v2.0 - Devis & Factures"}
@@ -889,71 +1004,188 @@ async def delete_pricing_item(item_id: str, request: Request):
 # ─── PDF Generation ───────────────────────────────────────────────────────────
 def generate_quote_pdf(q: dict) -> bytes:
     from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.styles import getSampleStyleSheet
     from reportlab.lib.units import cm
     from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm,
-                            topMargin=2*cm, bottomMargin=2*cm)
-    gold = colors.HexColor("#D4AF37")
-    dark = colors.HexColor("#0A0A0A")
-    styles = getSampleStyleSheet()
-    elems = []
-    # Header
-    elems.append(Paragraph(f'<font size="22" color="#D4AF37"><b>E3C</b></font>', styles["Normal"]))
-    elems.append(Paragraph('<font size="10" color="#666666">Entreprise de Constructions · Guadeloupe · 0690 44 97 14</font>', styles["Normal"]))
-    elems.append(Spacer(1, 0.5*cm))
-    elems.append(Paragraph(f'<font size="18"><b>DEVIS {q["quote_number"]}</b></font>', styles["Normal"]))
-    elems.append(Spacer(1, 0.3*cm))
-    # Info table
-    info = [
-        ["Date :", datetime.now().strftime("%d/%m/%Y"), "Client :", q["client_name"]],
-        ["Valable jusqu'au :", q.get("valid_until", ""), "Email :", q["client_email"]],
-        ["", "", "Téléphone :", q.get("client_phone", "")],
+    CW = 17.4 * cm
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=1.8*cm, rightMargin=1.8*cm,
+                            topMargin=1.5*cm, bottomMargin=2*cm)
+
+    GOLD  = colors.HexColor("#D4AF37")
+    DARK  = colors.HexColor("#111111")
+    LIGHT = colors.HexColor("#F8F8F8")
+    BORDER = colors.HexColor("#DDDDDD")
+    ss    = getSampleStyleSheet()
+    base  = ss["Normal"]
+
+    def esc(s):
+        return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    def P(txt, size=9, color="#333333", bold=False):
+        b, eb = ("<b>", "</b>") if bold else ("", "")
+        return Paragraph(f'{b}<font size="{size}" color="{color}">{esc(txt)}</font>{eb}', base)
+
+    elems   = []
+    now_str = datetime.now().strftime("%d/%m/%Y")
+    LW = 8.5 * cm
+    RW = CW - LW
+
+    # ── HEADER ──────────────────────────────────────────────
+    left_data = [
+        [P("E3C", 26, "#D4AF37", True)],
+        [P("Entreprise de Constructions", 9, "#333333", True)],
+        [P("Guadeloupe  971", 8.5, "#666666")],
+        [P("contact@e3c-construction.com", 8.5, "#666666")],
     ]
-    t = Table(info, colWidths=[4*cm, 6*cm, 4*cm, 5*cm])
-    t.setStyle(TableStyle([("FONTSIZE", (0, 0), (-1, -1), 9), ("TEXTCOLOR", (0, 0), (0, -1), gold),
-                            ("TEXTCOLOR", (2, 0), (2, -1), gold)]))
-    elems.append(t)
-    elems.append(Spacer(1, 0.5*cm))
-    elems.append(Paragraph(f'<b>Objet :</b> {q.get("project_description", "")}', styles["Normal"]))
-    elems.append(Spacer(1, 0.5*cm))
-    # Line items
-    headers = ["Description", "Qté", "Prix HT", "TVA %", "Total HT", "Total TTC"]
-    rows = [headers]
-    for item in q.get("line_items", []):
-        rows.append([item["description"], str(item["quantity"]),
-                     f"{item['unit_price']:.2f} €", f"{item['tva_rate']}%",
-                     f"{item['total_ht']:.2f} €", f"{item['total_ttc']:.2f} €"])
-    lt = Table(rows, colWidths=[7*cm, 2*cm, 2.5*cm, 2*cm, 2.5*cm, 3*cm])
-    lt.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), dark), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTSIZE", (0, 0), (-1, -1), 9), ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f5f5")]),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#dddddd")), ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+    left_t = Table(left_data, colWidths=[LW])
+    left_t.setStyle(TableStyle([
+        ("TOPPADDING",    (0,0),(-1,-1), 3),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 3),
+        ("LEFTPADDING",   (0,0),(-1,-1), 0),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 8),
     ]))
-    elems.append(lt)
+
+    valid = esc(q.get("valid_until") or "—")
+    right_data = [
+        [P("DEVIS", 15, "#FFFFFF", True)],
+        [P(esc(q["quote_number"]), 12, "#D4AF37", True)],
+        [Spacer(1, 0.15*cm)],
+        [Paragraph(f'<font size="8" color="#AAAAAA">Date :             </font><font size="8.5" color="#FFFFFF">{now_str}</font>', base)],
+        [Paragraph(f'<font size="8" color="#AAAAAA">Valable jusqu\'au : </font><font size="8.5" color="#D4AF37">{valid}</font>', base)],
+    ]
+    right_t = Table(right_data, colWidths=[RW])
+    right_t.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,-1), DARK),
+        ("TOPPADDING",    (0,0),(-1,-1), 4),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
+        ("LEFTPADDING",   (0,0),(-1,-1), 14),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
+        ("TOPPADDING",    (0,0),(0,0), 14),
+        ("BOTTOMPADDING", (0,-1),(-1,-1), 14),
+    ]))
+    header_t = Table([[left_t, right_t]], colWidths=[LW, RW])
+    header_t.setStyle(TableStyle([
+        ("VALIGN",        (0,0),(-1,-1), "TOP"),
+        ("LEFTPADDING",   (0,0),(-1,-1), 0),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 0),
+        ("TOPPADDING",    (0,0),(-1,-1), 0),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 0),
+    ]))
+    elems.append(header_t)
+    elems.append(Spacer(1, 0.5*cm))
+    elems.append(HRFlowable(width="100%", thickness=1.5, color=GOLD, spaceAfter=0.4*cm))
+
+    # ── ÉTABLI POUR ─────────────────────────────────────────
+    cli_rows = [
+        [P("ETABLI POUR :", 7.5, "#999999")],
+        [P(q["client_name"], 10, "#222222", True)],
+        [P(q["client_email"], 8.5, "#555555")],
+    ]
+    if q.get("client_phone"):
+        cli_rows.append([P(f'Tel : {q["client_phone"]}', 8.5, "#555555")])
+    if q.get("client_address"):
+        cli_rows.append([P(q["client_address"], 8.5, "#555555")])
+    cli_t = Table(cli_rows, colWidths=[CW])
+    cli_t.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,-1), LIGHT),
+        ("LEFTPADDING",   (0,0),(-1,-1), 10),
+        ("TOPPADDING",    (0,0),(-1,-1), 4),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
+        ("TOPPADDING",    (0,0),(0,0), 8),
+        ("BOTTOMPADDING", (0,-1),(-1,-1), 8),
+        ("BOX",           (0,0),(-1,-1), 0.5, BORDER),
+    ]))
+    elems.append(cli_t)
+    elems.append(Spacer(1, 0.4*cm))
+
+    if q.get("project_description"):
+        elems.append(P(f'Objet : {q["project_description"]}', 9))
+        elems.append(Spacer(1, 0.4*cm))
+
+    # ── LINE ITEMS ──────────────────────────────────────────
+    cw_items = [6.9*cm, 1.5*cm, 2.5*cm, 1.5*cm, 2.5*cm, 2.5*cm]
+    hdr = [P(h, 8.5, "#FFFFFF", True) for h in ["Description","Qte","P.U. HT","TVA","Total HT","Total TTC"]]
+    rows = [hdr]
+    for item in q.get("line_items", []):
+        rows.append([
+            P(item.get("description",""), 8.5),
+            P(str(item.get("quantity","")), 8.5),
+            P(f'{item.get("unit_price",0):.2f} EUR', 8.5),
+            P(f'{item.get("tva_rate",8.5):.1f}%', 8.5),
+            P(f'{item.get("total_ht",0):.2f} EUR', 8.5),
+            P(f'{item.get("total_ttc",0):.2f} EUR', 8.5, "#333333", True),
+        ])
+    items_t = Table(rows, colWidths=cw_items, repeatRows=1)
+    items_t.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,0), DARK),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1), [colors.white, LIGHT]),
+        ("GRID",          (0,0),(-1,-1), 0.4, BORDER),
+        ("ALIGN",         (1,0),(-1,-1), "CENTER"),
+        ("ALIGN",         (4,1),(5,-1), "RIGHT"),
+        ("TOPPADDING",    (0,0),(-1,-1), 6),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 6),
+        ("LEFTPADDING",   (0,0),(0,-1), 8),
+        ("RIGHTPADDING",  (5,0),(5,-1), 8),
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+    ]))
+    elems.append(items_t)
     elems.append(Spacer(1, 0.3*cm))
-    # Totals
-    totals = [["Total HT :", f"{q['total_ht']:.2f} €"],
-              ["TVA :", f"{q['total_tva']:.2f} €"],
-              ["TOTAL TTC :", f"{q['total_ttc']:.2f} €"]]
-    tt = Table(totals, colWidths=[5*cm, 3*cm])
-    tt.setStyle(TableStyle([("ALIGN", (1, 0), (1, -1), "RIGHT"),
-                             ("FONTSIZE", (0, 0), (-1, -1), 10),
-                             ("FONTNAME", (0, 2), (-1, 2), "Helvetica-Bold"),
-                             ("TEXTCOLOR", (0, 2), (-1, 2), gold),
-                             ("TOPPADDING", (0, 2), (-1, 2), 8)]))
-    from reportlab.platypus import HRFlowable
-    elems.append(HRFlowable(width="100%", color=gold))
-    elems.append(Spacer(1, 0.2*cm))
-    wrap = Table([[Spacer(1, 1), tt]], colWidths=["*", 8*cm])
+
+    # ── TOTALS ──────────────────────────────────────────────
+    TW = 7.5 * cm
+    t_rows = [
+        [P("Total HT :", 9),  P(f'{q["total_ht"]:.2f} EUR', 9, "#333333", True)],
+        [P("TVA :", 9),       P(f'{q.get("total_tva",0):.2f} EUR', 9, "#555555")],
+        [P("TOTAL TTC :", 10, "#111111", True), P(f'{q["total_ttc"]:.2f} EUR', 11, "#D4AF37", True)],
+    ]
+    tot_t = Table(t_rows, colWidths=[4.0*cm, TW - 4.0*cm])
+    tot_t.setStyle(TableStyle([
+        ("ALIGN",         (1,0),(1,-1), "RIGHT"),
+        ("TOPPADDING",    (0,0),(-1,-1), 5),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 5),
+        ("LEFTPADDING",   (0,0),(-1,-1), 10),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
+        ("LINEABOVE",     (0,-1),(-1,-1), 0.5, BORDER),
+        ("BACKGROUND",    (0,-1),(-1,-1), colors.HexColor("#FBF7E8")),
+        ("TOPPADDING",    (0,-1),(-1,-1), 8),
+        ("BOTTOMPADDING", (0,-1),(-1,-1), 8),
+    ]))
+    wrap = Table([[Spacer(1,1), tot_t]], colWidths=[CW - TW, TW])
+    wrap.setStyle(TableStyle([
+        ("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0),
+        ("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),
+    ]))
     elems.append(wrap)
+
     if q.get("notes"):
         elems.append(Spacer(1, 0.5*cm))
-        elems.append(Paragraph(f'<b>Notes :</b> {q["notes"]}', styles["Normal"]))
-    elems.append(Spacer(1, 1*cm))
-    elems.append(Paragraph('<font size="8" color="#999999">E3C Entreprise de Constructions · Guadeloupe (971)</font>', styles["Normal"]))
+        elems.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
+        elems.append(Spacer(1, 0.3*cm))
+        elems.append(P(f'Notes : {q["notes"]}', 9, "#555555"))
+
+    elems.append(Spacer(1, 1.2*cm))
+    sig_t = Table([
+        [P("Bon pour accord :", 8.5, "#666666"), P("Signature du client :", 8.5, "#666666")],
+        [P(q["client_name"], 9, "#333333", True), Spacer(1, 0.1*cm)],
+        [Spacer(1, 1.2*cm), Spacer(1, 1.2*cm)],
+    ], colWidths=[CW/2, CW/2])
+    sig_t.setStyle(TableStyle([
+        ("BOX",          (0,0),(-1,-1), 0.5, BORDER),
+        ("LINEAFTER",    (0,0),(0,-1), 0.5, BORDER),
+        ("TOPPADDING",   (0,0),(-1,-1), 6),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 6),
+        ("LEFTPADDING",  (0,0),(-1,-1), 10),
+    ]))
+    elems.append(sig_t)
+
+    elems.append(Spacer(1, 0.8*cm))
+    elems.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
+    elems.append(Spacer(1, 0.3*cm))
+    elems.append(P("E3C Entreprise de Constructions  -  Guadeloupe (971)  -  contact@e3c-construction.com", 7.5, "#999999"))
     doc.build(elems)
     return buf.getvalue()
 
@@ -963,70 +1195,193 @@ def generate_invoice_pdf(inv: dict) -> bytes:
     from reportlab.lib.units import cm
     from reportlab.lib import colors
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm,
-                            topMargin=2*cm, bottomMargin=2*cm)
-    gold = colors.HexColor("#D4AF37")
-    dark = colors.HexColor("#0A0A0A")
-    styles = getSampleStyleSheet()
-    elems = []
-    elems.append(Paragraph('<font size="22" color="#D4AF37"><b>E3C</b></font>', styles["Normal"]))
-    elems.append(Paragraph('<font size="10" color="#666666">Entreprise de Constructions · Guadeloupe · 0690 44 97 14</font>', styles["Normal"]))
-    elems.append(Spacer(1, 0.5*cm))
-    elems.append(Paragraph(f'<font size="18"><b>FACTURE {inv["invoice_number"]}</b></font>', styles["Normal"]))
-    elems.append(Spacer(1, 0.3*cm))
-    info = [["Facture :", inv["invoice_number"], "Client :", inv["client_name"]],
-            ["Devis ref :", inv.get("quote_number", ""), "Email :", inv["client_email"]],
-            ["Date :", datetime.now().strftime("%d/%m/%Y"), "Tél :", inv.get("client_phone", "")]]
-    t = Table(info, colWidths=[4*cm, 6*cm, 4*cm, 5*cm])
-    t.setStyle(TableStyle([("FONTSIZE", (0, 0), (-1, -1), 9),
-                            ("TEXTCOLOR", (0, 0), (0, -1), gold), ("TEXTCOLOR", (2, 0), (2, -1), gold)]))
-    elems.append(t)
-    elems.append(Spacer(1, 0.5*cm))
-    elems.append(Paragraph(f'<b>Objet :</b> {inv.get("project_description", "")}', styles["Normal"]))
-    elems.append(Spacer(1, 0.5*cm))
-    headers = ["Description", "Qté", "Prix HT", "TVA %", "Total HT", "Total TTC"]
-    rows = [headers]
-    for item in inv.get("line_items", []):
-        rows.append([item["description"], str(item["quantity"]),
-                     f"{item['unit_price']:.2f} €", f"{item['tva_rate']}%",
-                     f"{item['total_ht']:.2f} €", f"{item['total_ttc']:.2f} €"])
-    lt = Table(rows, colWidths=[7*cm, 2*cm, 2.5*cm, 2*cm, 2.5*cm, 3*cm])
-    lt.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), dark), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f5f5")]),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#dddddd")), ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+    CW = 17.4 * cm
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=1.8*cm, rightMargin=1.8*cm,
+                            topMargin=1.5*cm, bottomMargin=2*cm)
+
+    GOLD  = colors.HexColor("#D4AF37")
+    DARK  = colors.HexColor("#111111")
+    LIGHT = colors.HexColor("#F8F8F8")
+    BORDER = colors.HexColor("#DDDDDD")
+    ss    = getSampleStyleSheet()
+    base  = ss["Normal"]
+
+    def esc(s):
+        return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    def P(txt, size=9, color="#333333", bold=False):
+        b, eb = ("<b>", "</b>") if bold else ("", "")
+        return Paragraph(f'{b}<font size="{size}" color="{color}">{esc(txt)}</font>{eb}', base)
+
+    elems   = []
+    now_str = datetime.now().strftime("%d/%m/%Y")
+    LW = 8.5 * cm
+    RW = CW - LW
+
+    # ── HEADER ──────────────────────────────────────────────
+    left_data = [
+        [P("E3C", 26, "#D4AF37", True)],
+        [P("Entreprise de Constructions", 9, "#333333", True)],
+        [P("Guadeloupe  971", 8.5, "#666666")],
+        [P("contact@e3c-construction.com", 8.5, "#666666")],
+    ]
+    left_t = Table(left_data, colWidths=[LW])
+    left_t.setStyle(TableStyle([
+        ("TOPPADDING",    (0,0),(-1,-1), 3),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 3),
+        ("LEFTPADDING",   (0,0),(-1,-1), 0),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 8),
     ]))
-    elems.append(lt)
+
+    ref_val = esc(inv.get("quote_number") or "—")
+    right_data = [
+        [P("FACTURE", 15, "#FFFFFF", True)],
+        [P(esc(inv["invoice_number"]), 12, "#D4AF37", True)],
+        [Spacer(1, 0.15*cm)],
+        [Paragraph(f'<font size="8" color="#AAAAAA">Date :         </font><font size="8.5" color="#FFFFFF">{now_str}</font>', base)],
+        [Paragraph(f'<font size="8" color="#AAAAAA">Ref. devis :   </font><font size="8.5" color="#D4AF37">{ref_val}</font>', base)],
+    ]
+    right_t = Table(right_data, colWidths=[RW])
+    right_t.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,-1), DARK),
+        ("TOPPADDING",    (0,0),(-1,-1), 4),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
+        ("LEFTPADDING",   (0,0),(-1,-1), 14),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
+        ("TOPPADDING",    (0,0),(0,0), 14),
+        ("BOTTOMPADDING", (0,-1),(-1,-1), 14),
+    ]))
+    header_t = Table([[left_t, right_t]], colWidths=[LW, RW])
+    header_t.setStyle(TableStyle([
+        ("VALIGN",        (0,0),(-1,-1), "TOP"),
+        ("LEFTPADDING",   (0,0),(-1,-1), 0),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 0),
+        ("TOPPADDING",    (0,0),(-1,-1), 0),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 0),
+    ]))
+    elems.append(header_t)
+    elems.append(Spacer(1, 0.5*cm))
+    elems.append(HRFlowable(width="100%", thickness=1.5, color=GOLD, spaceAfter=0.4*cm))
+
+    # ── FACTURER À ──────────────────────────────────────────
+    bill_rows = [
+        [P("FACTURER A :", 7.5, "#999999")],
+        [P(inv["client_name"], 10, "#222222", True)],
+        [P(inv["client_email"], 8.5, "#555555")],
+    ]
+    if inv.get("client_phone"):
+        bill_rows.append([P(f'Tel : {inv["client_phone"]}', 8.5, "#555555")])
+    if inv.get("client_address"):
+        bill_rows.append([P(inv["client_address"], 8.5, "#555555")])
+    bill_t = Table(bill_rows, colWidths=[CW])
+    bill_t.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,-1), LIGHT),
+        ("LEFTPADDING",   (0,0),(-1,-1), 10),
+        ("TOPPADDING",    (0,0),(-1,-1), 4),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
+        ("TOPPADDING",    (0,0),(0,0), 8),
+        ("BOTTOMPADDING", (0,-1),(-1,-1), 8),
+        ("BOX",           (0,0),(-1,-1), 0.5, BORDER),
+    ]))
+    elems.append(bill_t)
+    elems.append(Spacer(1, 0.4*cm))
+
+    if inv.get("project_description"):
+        elems.append(P(f'Objet : {inv["project_description"]}', 9))
+        elems.append(Spacer(1, 0.4*cm))
+
+    # ── LINE ITEMS ──────────────────────────────────────────
+    cw_items = [6.9*cm, 1.5*cm, 2.5*cm, 1.5*cm, 2.5*cm, 2.5*cm]
+    hdr = [P(h, 8.5, "#FFFFFF", True) for h in ["Description","Qte","P.U. HT","TVA","Total HT","Total TTC"]]
+    rows = [hdr]
+    for item in inv.get("line_items", []):
+        rows.append([
+            P(item.get("description",""), 8.5),
+            P(str(item.get("quantity","")), 8.5),
+            P(f'{item.get("unit_price",0):.2f} EUR', 8.5),
+            P(f'{item.get("tva_rate",8.5):.1f}%', 8.5),
+            P(f'{item.get("total_ht",0):.2f} EUR', 8.5),
+            P(f'{item.get("total_ttc",0):.2f} EUR', 8.5, "#333333", True),
+        ])
+    items_t = Table(rows, colWidths=cw_items, repeatRows=1)
+    items_t.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,0), DARK),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1), [colors.white, LIGHT]),
+        ("GRID",          (0,0),(-1,-1), 0.4, BORDER),
+        ("ALIGN",         (1,0),(-1,-1), "CENTER"),
+        ("ALIGN",         (4,1),(5,-1), "RIGHT"),
+        ("TOPPADDING",    (0,0),(-1,-1), 6),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 6),
+        ("LEFTPADDING",   (0,0),(0,-1), 8),
+        ("RIGHTPADDING",  (5,0),(5,-1), 8),
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+    ]))
+    elems.append(items_t)
     elems.append(Spacer(1, 0.3*cm))
-    totals = [["Total HT :", f"{inv['total_ht']:.2f} €"],
-              ["TVA :", f"{inv['total_tva']:.2f} €"],
-              ["TOTAL TTC :", f"{inv['total_ttc']:.2f} €"]]
-    tt = Table(totals, colWidths=[5*cm, 3*cm])
-    tt.setStyle(TableStyle([("ALIGN", (1, 0), (1, -1), "RIGHT"),
-                             ("FONTSIZE", (0, 0), (-1, -1), 10),
-                             ("FONTNAME", (0, 2), (-1, 2), "Helvetica-Bold"),
-                             ("TEXTCOLOR", (0, 2), (-1, 2), gold), ("TOPPADDING", (0, 2), (-1, 2), 8)]))
-    elems.append(HRFlowable(width="100%", color=gold))
-    elems.append(Spacer(1, 0.2*cm))
-    wrap = Table([[Spacer(1, 1), tt]], colWidths=["*", 8*cm])
+
+    # ── TOTALS ──────────────────────────────────────────────
+    TW = 7.5 * cm
+    t_rows = [
+        [P("Total HT :", 9),  P(f'{inv["total_ht"]:.2f} EUR', 9, "#333333", True)],
+        [P("TVA :", 9),       P(f'{inv.get("total_tva",0):.2f} EUR', 9, "#555555")],
+        [P("TOTAL TTC :", 10, "#111111", True), P(f'{inv["total_ttc"]:.2f} EUR', 11, "#D4AF37", True)],
+    ]
+    tot_t = Table(t_rows, colWidths=[4.0*cm, TW - 4.0*cm])
+    tot_t.setStyle(TableStyle([
+        ("ALIGN",         (1,0),(1,-1), "RIGHT"),
+        ("TOPPADDING",    (0,0),(-1,-1), 5),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 5),
+        ("LEFTPADDING",   (0,0),(-1,-1), 10),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
+        ("LINEABOVE",     (0,-1),(-1,-1), 0.5, BORDER),
+        ("BACKGROUND",    (0,-1),(-1,-1), colors.HexColor("#FBF7E8")),
+        ("TOPPADDING",    (0,-1),(-1,-1), 8),
+        ("BOTTOMPADDING", (0,-1),(-1,-1), 8),
+    ]))
+    wrap = Table([[Spacer(1,1), tot_t]], colWidths=[CW - TW, TW])
+    wrap.setStyle(TableStyle([
+        ("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0),
+        ("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),
+    ]))
     elems.append(wrap)
+
+    # ── PAYMENT SCHEDULE ────────────────────────────────────
     if inv.get("payment_tranches"):
-        elems.append(Spacer(1, 0.5*cm))
-        elems.append(Paragraph('<b>Calendrier de règlement :</b>', styles["Normal"]))
-        elems.append(Spacer(1, 0.2*cm))
-        tr_rows = [["Tranche", "Montant", "Échéance", "Statut"]]
+        elems.append(Spacer(1, 0.6*cm))
+        elems.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
+        elems.append(Spacer(1, 0.3*cm))
+        elems.append(P("Calendrier de reglement", 9, "#111111", True))
+        elems.append(Spacer(1, 0.3*cm))
+        tr_cw = [7.0*cm, 3.0*cm, 4.0*cm, 3.4*cm]
+        tr_hdr = [P(h, 8.5, "#333333", True) for h in ["Tranche","Montant","Echeance","Statut"]]
+        tr_rows = [tr_hdr]
         for t in inv["payment_tranches"]:
-            status_label = "Payé" if t["status"] == "paid" else "En attente"
-            tr_rows.append([t["label"], f"{t['amount']:.2f} €", t.get("due_date", ""), status_label])
-        trt = Table(tr_rows, colWidths=[7*cm, 3*cm, 4*cm, 5*cm])
+            sc = "#16a34a" if t["status"] == "paid" else "#B45309"
+            sl = "Paye" if t["status"] == "paid" else "En attente"
+            tr_rows.append([
+                P(t["label"], 8.5),
+                P(f'{t["amount"]:.2f} EUR', 8.5, "#333333", True),
+                P(t.get("due_date","—"), 8.5),
+                P(sl, 8.5, sc, True),
+            ])
+        trt = Table(tr_rows, colWidths=tr_cw)
         trt.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f0f0f0")),
-            ("FONTSIZE", (0, 0), (-1, -1), 9), ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#dddddd"))]))
+            ("BACKGROUND",    (0,0),(-1,0), LIGHT),
+            ("GRID",          (0,0),(-1,-1), 0.4, BORDER),
+            ("TOPPADDING",    (0,0),(-1,-1), 6),
+            ("BOTTOMPADDING", (0,0),(-1,-1), 6),
+            ("LEFTPADDING",   (0,0),(0,-1), 8),
+            ("ALIGN",         (1,0),(1,-1), "RIGHT"),
+        ]))
         elems.append(trt)
-    elems.append(Spacer(1, 1*cm))
-    elems.append(Paragraph('<font size="8" color="#999999">E3C Entreprise de Constructions · Guadeloupe (971)</font>', styles["Normal"]))
+
+    elems.append(Spacer(1, 0.8*cm))
+    elems.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
+    elems.append(Spacer(1, 0.3*cm))
+    elems.append(P("E3C Entreprise de Constructions  -  Guadeloupe (971)  -  contact@e3c-construction.com", 7.5, "#999999"))
     doc.build(elems)
     return buf.getvalue()
 

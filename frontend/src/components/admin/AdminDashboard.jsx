@@ -412,6 +412,7 @@ export default function AdminDashboard() {
   const [editQuote, setEditQuote] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [convertingId, setConvertingId] = useState(null);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -445,6 +446,21 @@ export default function AdminDashboard() {
     await ax().post(`${API}/quotes/${id}/convert`);
     fetchAll();
     setTab("invoices");
+  };
+
+  const convertRequestToInvoice = async (id) => {
+    if (!window.confirm("Convertir cette demande de devis en facture directement ?")) return;
+    setConvertingId(id);
+    try {
+      const res = await ax().post(`${API}/quote-requests/${id}/to-invoice`);
+      await fetchAll();
+      setSelectedInvoice(res.data);
+      setTab("invoices");
+    } catch (err) {
+      alert(err.response?.data?.detail || "Erreur lors de la conversion");
+    } finally {
+      setConvertingId(null);
+    }
   };
 
   const tabs = [
@@ -709,9 +725,23 @@ export default function AdminDashboard() {
                           ~ {r.estimated_total_ttc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} € TTC
                         </p>
                       )}
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-sm mt-1 inline-block ${r.status === "new" ? "bg-blue-400/10 text-blue-400" : "bg-gray-400/10 text-gray-400"}`}>
-                        {r.status === "new" ? "Nouveau" : r.status}
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-sm mt-1 inline-block ${
+                        r.status === "new" ? "bg-blue-400/10 text-blue-400"
+                        : r.status === "converted" ? "bg-purple-400/10 text-purple-400"
+                        : "bg-gray-400/10 text-gray-400"
+                      }`}>
+                        {r.status === "new" ? "Nouveau" : r.status === "converted" ? "Converti" : r.status}
                       </span>
+                      {r.status !== "converted" && (
+                        <button
+                          data-testid={`convert-request-${r.id}`}
+                          onClick={() => convertRequestToInvoice(r.id)}
+                          disabled={convertingId === r.id}
+                          className="mt-2 flex items-center gap-1.5 bg-[#D4AF37] text-black text-xs font-bold px-3 py-1.5 hover:bg-[#E6C65A] transition-colors disabled:opacity-60 rounded-sm ml-auto">
+                          <Receipt size={11}/>
+                          {convertingId === r.id ? "Conversion..." : "Créer Facture"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
