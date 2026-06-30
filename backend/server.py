@@ -1168,6 +1168,27 @@ def generate_quote_pdf(q: dict) -> bytes:
         elems.append(P(f'Notes : {q["notes"]}', 9, "#555555"))
 
     elems.append(Spacer(1, 1.2*cm))
+
+    # ── DISCLAIMER ──────────────────────────────────────────
+    disc_text = Paragraph(
+        '<font size="8" color="#92400E"><b>Estimation prévisionnelle, non contractuelle</b> — '
+        'Ce chiffrage est établi sur la base des informations communiquées et reste indicatif. '
+        "Une visite technique gratuite de l'un de nos experts permettra de confirmer et finaliser "
+        'les tarifs définitifs. Tout ajustement éventuel sera soumis à votre validation avant tout engagement.</font>',
+        base
+    )
+    disc_t = Table([[disc_text]], colWidths=[CW])
+    disc_t.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,-1), colors.HexColor("#FFFBEB")),
+        ("LEFTPADDING",   (0,0),(-1,-1), 10),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
+        ("TOPPADDING",    (0,0),(-1,-1), 8),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 8),
+        ("BOX",           (0,0),(-1,-1), 0.5, colors.HexColor("#F59E0B")),
+    ]))
+    elems.append(disc_t)
+    elems.append(Spacer(1, 0.8*cm))
+
     sig_t = Table([
         [P("Bon pour accord :", 8.5, "#666666"), P("Signature du client :", 8.5, "#666666")],
         [P(q["client_name"], 9, "#333333", True), Spacer(1, 0.1*cm)],

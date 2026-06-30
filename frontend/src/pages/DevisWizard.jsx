@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
-import { ChevronRight, ChevronLeft, CheckCircle, Building2, Home, Layers, Hammer, PaintBucket, Wrench, Zap, Droplets, Trees, HelpCircle, Check, Loader } from "lucide-react";
+import { ChevronRight, ChevronLeft, CheckCircle, Building2, Home, Layers, Hammer, PaintBucket, Wrench, Zap, Droplets, Trees, HelpCircle, Check, Loader, Info } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { SEO } from "@/components/SEO";
@@ -374,7 +374,12 @@ export default function DevisWizard() {
                         <div className="flex justify-between text-sm"><span className="text-[#9E9E9E] dark:text-gray-500">TVA</span><span className="text-[#4B4B4B] dark:text-gray-300">{totalTVA.toFixed(2)} €</span></div>
                         <div className="flex justify-between text-base font-bold"><span className="text-[#1A1A1A] dark:text-white">Total TTC estimé</span><span className="text-[#D4AF37]">{totalTTC.toFixed(2)} €</span></div>
                       </div>
-                      <p className="text-[#ADADAD] dark:text-gray-600 text-xs mt-3">* Estimation indicative, non contractuelle. Le devis définitif sera établi après visite.</p>
+                      <div className="mt-3 flex items-start gap-2.5 bg-amber-50 dark:bg-[#D4AF37]/5 border border-amber-200 dark:border-[#D4AF37]/20 rounded-sm p-3">
+                        <Info size={13} className="text-amber-600 dark:text-[#D4AF37] mt-0.5 flex-shrink-0"/>
+                        <p className="text-amber-800 dark:text-[#D4AF37]/80 text-xs leading-relaxed">
+                          <span className="font-semibold">Estimation prévisionnelle.</span> Ces montants sont calculés sur la base des informations communiquées et restent indicatifs. Une visite technique de l'un de nos experts permettra de confirmer et finaliser le devis définitif.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -515,6 +520,14 @@ export default function DevisWizard() {
                 <p className="text-[#4B4B4B] dark:text-gray-300"><span className="text-[#9E9E9E] dark:text-gray-500 mr-2">Prestations :</span>{data.services.map(id => SERVICES_LIST.find(s => s.id === id)?.label).join(", ")}</p>
                 <p className="text-[#4B4B4B] dark:text-gray-300"><span className="text-[#9E9E9E] dark:text-gray-500 mr-2">Commune :</span>{data.commune}</p>
                 {data.budget_range && <p className="text-[#4B4B4B] dark:text-gray-300"><span className="text-[#9E9E9E] dark:text-gray-500 mr-2">Budget :</span>{data.budget_range}</p>}
+              </div>
+
+              {/* Disclaimer estimatif — étape finale */}
+              <div className="mt-4 flex items-start gap-2.5 bg-amber-50/60 dark:bg-[#D4AF37]/4 border border-amber-200/70 dark:border-[#D4AF37]/15 rounded-sm p-3.5">
+                <Info size={14} className="text-amber-600 dark:text-[#D4AF37] mt-0.5 flex-shrink-0"/>
+                <p className="text-amber-800 dark:text-[#D4AF37]/75 text-xs leading-relaxed">
+                  <span className="font-semibold">Estimation prévisionnelle, non contractuelle.</span> Ce chiffrage est établi à partir des éléments transmis. Afin de garantir la précision du devis définitif, une visite technique <strong>gratuite</strong> par un expert E3C sera programmée. Tout ajustement éventuel vous sera soumis pour validation avant tout engagement.
+                </p>
               </div>
 
               {error && <div className="mt-4 bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-sm text-sm">{error}</div>}

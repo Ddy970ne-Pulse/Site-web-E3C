@@ -324,10 +324,18 @@ function QuoteDetailView({ quote, onBack, onAccept, onRefuse, loading }) {
           </div>
         </div>
 
-        <div className="text-right space-y-1 mb-6">
+        <div className="text-right space-y-1 mb-4">
           <p className="text-gray-400 text-sm">Total HT : <span className="text-white">{quote.total_ht?.toFixed(2)} €</span></p>
           <p className="text-gray-400 text-sm">TVA : <span className="text-white">{quote.total_tva?.toFixed(2)} €</span></p>
           <p className="text-[#D4AF37] font-bold text-xl">TOTAL TTC : {quote.total_ttc?.toFixed(2)} €</p>
+        </div>
+
+        {/* Disclaimer estimatif */}
+        <div className="flex items-start gap-2.5 bg-[#D4AF37]/5 border border-[#D4AF37]/15 rounded-sm p-3.5 mb-5">
+          <AlertCircle size={13} className="text-[#D4AF37]/70 mt-0.5 flex-shrink-0"/>
+          <p className="text-[#D4AF37]/65 text-xs leading-relaxed" data-testid="quote-disclaimer">
+            <span className="font-semibold text-[#D4AF37]/80">Estimation prévisionnelle.</span> Ce chiffrage est établi sur la base des informations communiquées et reste indicatif. Une visite technique gratuite de l'un de nos experts permettra de confirmer et finaliser ce devis. Tout ajustement éventuel sera soumis à votre accord avant tout engagement.
+          </p>
         </div>
 
         {quote.notes && (
