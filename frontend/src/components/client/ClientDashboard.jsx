@@ -41,8 +41,13 @@ export default function ClientDashboard() {
     try {
       const [q, inv] = await Promise.all([ax().get(`${API}/quotes`), ax().get(`${API}/invoices`)]);
       setQuotes(q.data); setInvoices(inv.data);
+    } catch (err) {
+      if (err?.response?.status === 401) {
+        logout();
+        navigate("/connexion");
+      }
     } finally { setLoading(false); }
-  }, []);
+  }, [logout, navigate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

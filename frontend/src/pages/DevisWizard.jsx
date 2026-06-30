@@ -101,6 +101,18 @@ export default function DevisWizard() {
     phone: user?.phone || "",
   });
 
+  // Sync form fields when auth resolves after mount (race condition fix)
+  useEffect(() => {
+    if (user) {
+      setData(d => ({
+        ...d,
+        name: d.name || user.name || "",
+        email: d.email || user.email || "",
+        phone: d.phone || user.phone || "",
+      }));
+    }
+  }, [user]);
+
   const set = (k, v) => setData(p => ({ ...p, [k]: v }));
   const toggleService = (id) => {
     setData(p => ({
