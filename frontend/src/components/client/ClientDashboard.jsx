@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { LogOut, FileText, Receipt, CreditCard, CheckCircle, XCircle, Download, AlertCircle } from "lucide-react";
+import { LogOut, FileText, Receipt, CreditCard, CheckCircle, XCircle, Download, AlertCircle, Landmark, Copy } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ax = () => axios.create({ withCredentials: true });
@@ -35,6 +35,8 @@ export default function ClientDashboard() {
   const [paymentMsg, setPaymentMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [bankInfo, setBankInfo] = useState(null);
+  const [bankTrancheId, setBankTrancheId] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -106,6 +108,20 @@ export default function ClientDashboard() {
     } catch (err) {
       setPaymentMsg(err.response?.data?.detail || "Erreur lors du paiement");
     }
+  };
+
+  const toggleBankTransfer = async (tranche) => {
+    if (bankTrancheId === tranche.id) { setBankTrancheId(null); return; }
+    if (!bankInfo) {
+      try {
+        const res = await ax().get(`${API}/payments/bank-transfer-info`);
+        setBankInfo(res.data);
+      } catch {
+        setPaymentMsg("Impossible de charger les coordonnées bancaires");
+        return;
+      }
+    }
+    setBankTrancheId(tranche.id);
   };
 
   const tabs = [
@@ -234,25 +250,37 @@ export default function ClientDashboard() {
                     <p className="text-xs text-gray-500 uppercase tracking-wider mt-4 mb-3 font-semibold">Calendrier de règlement</p>
                     <div className="space-y-2">
                       {inv.payment_tranches.map(t => (
-                        <div key={t.id} className="flex items-center justify-between bg-white/3 border border-white/5 px-4 py-3 rounded-sm">
-                          <div>
-                            <p className="text-white text-sm font-medium">{t.label}</p>
-                            <p className="text-gray-400 text-xs">Échéance : {t.due_date ? new Date(t.due_date).toLocaleDateString("fr-FR") : "—"}</p>
+                        <div key={t.id} className="bg-white/3 border border-white/5 rounded-sm overflow-hidden">
+                          <div className="flex items-center justify-between px-4 py-3">
+                            <div>
+                              <p className="text-white text-sm font-medium">{t.label}</p>
+                              <p className="text-gray-400 text-xs">Échéance : {t.due_date ? new Date(t.due_date).toLocaleDateString("fr-FR") : "—"}</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-white font-bold">{t.amount?.toFixed(2)} €</span>
+                              {t.status === "paid" ? (
+                                <span className="flex items-center gap-1 text-green-400 text-xs font-semibold">
+                                  <CheckCircle size={13}/> Payé
+                                </span>
+                              ) : (
+                                <div className="flex items-center gap-1.5">
+                                  <button onClick={() => toggleBankTransfer(t)}
+                                    data-testid={`bank-transfer-tranche-${t.id}`}
+                                    className="flex items-center gap-1 border border-white/15 text-gray-300 font-semibold text-xs px-3 py-1.5 hover:border-[#D4AF37]/50 hover:text-[#D4AF37] transition-colors rounded-sm">
+                                    <Landmark size={12}/> Virement
+                                  </button>
+                                  <button onClick={() => payTranche(inv, t)}
+                                    data-testid={`pay-tranche-${t.id}`}
+                                    className="flex items-center gap-1 bg-[#D4AF37] text-black font-bold text-xs px-3 py-1.5 hover:bg-[#E6C65A] transition-colors rounded-sm">
+                                    <CreditCard size={12}/> Payer par carte
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-white font-bold">{t.amount?.toFixed(2)} €</span>
-                            {t.status === "paid" ? (
-                              <span className="flex items-center gap-1 text-green-400 text-xs font-semibold">
-                                <CheckCircle size={13}/> Payé
-                              </span>
-                            ) : (
-                              <button onClick={() => payTranche(inv, t)}
-                                data-testid={`pay-tranche-${t.id}`}
-                                className="flex items-center gap-1 bg-[#D4AF37] text-black font-bold text-xs px-3 py-1.5 hover:bg-[#E6C65A] transition-colors rounded-sm">
-                                <CreditCard size={12}/> Payer
-                              </button>
-                            )}
-                          </div>
+                          {bankTrancheId === t.id && (
+                            <BankTransferPanel bankInfo={bankInfo} reference={`${inv.invoice_number} — ${t.label}`} />
+                          )}
                         </div>
                       ))}
                     </div>
@@ -388,6 +416,54 @@ function QuoteDetailView({ quote, onBack, onAccept, onRefuse, loading }) {
           </a>
         </div>
       </div>
+    </div>
+  );
+}
+
+function BankTransferPanel({ bankInfo, reference }) {
+  const [copied, setCopied] = useState("");
+
+  const copy = (field, value) => {
+    navigator.clipboard?.writeText(value);
+    setCopied(field);
+    setTimeout(() => setCopied(""), 1500);
+  };
+
+  if (!bankInfo) return null;
+
+  if (!bankInfo.configured) {
+    return (
+      <div className="border-t border-white/5 px-4 py-3 bg-black/20">
+        <p className="text-gray-500 text-xs">Le paiement par virement n'est pas encore disponible pour cette facture.</p>
+      </div>
+    );
+  }
+
+  const rows = [
+    ["Titulaire", bankInfo.account_holder],
+    ["IBAN", bankInfo.iban],
+    ["BIC", bankInfo.bic],
+    ["Banque", bankInfo.bank_name],
+  ].filter(([, v]) => v);
+
+  return (
+    <div className="border-t border-white/5 px-4 py-4 bg-black/20 space-y-2" data-testid="bank-transfer-panel">
+      {rows.map(([label, value]) => (
+        <div key={label} className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-gray-500 text-[11px] uppercase tracking-wider">{label}</p>
+            <p className="text-white text-sm font-mono">{value}</p>
+          </div>
+          <button onClick={() => copy(label, value)}
+            className="flex items-center gap-1 text-gray-400 hover:text-[#D4AF37] text-xs transition-colors flex-shrink-0">
+            <Copy size={12}/> {copied === label ? "Copié" : "Copier"}
+          </button>
+        </div>
+      ))}
+      <p className="text-gray-500 text-xs pt-2 border-t border-white/5">
+        Merci d'indiquer la référence <span className="text-gray-300 font-medium">« {reference} »</span> lors
+        de votre virement. Le paiement sera confirmé par notre équipe après réception, sous quelques jours ouvrés.
+      </p>
     </div>
   );
 }

@@ -172,6 +172,13 @@ class SettingsUpdate(BaseModel):
     paypal_client_id: Optional[str] = None
     paypal_client_secret: Optional[str] = None
     paypal_mode: Optional[str] = None
+    bank_account_holder: Optional[str] = None
+    bank_iban: Optional[str] = None
+    bank_bic: Optional[str] = None
+    bank_name: Optional[str] = None
+
+class MarkTranchePaidRequest(BaseModel):
+    payment_method: str = "virement"  # virement | especes | cheque
 
 class LineItem(BaseModel):
     description: str
@@ -815,6 +822,48 @@ async def list_payments(request: Request):
     txs = await db.payment_transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
     return txs
 
+@api_router.get("/payments/bank-transfer-info")
+async def get_bank_transfer_info(request: Request):
+    await get_current_user(request)
+    settings = await settings_store.get_settings(db)
+    configured = bool(settings.get("bank_iban"))
+    return {
+        "configured": configured,
+        "account_holder": settings.get("bank_account_holder", ""),
+        "iban": settings.get("bank_iban", ""),
+        "bic": settings.get("bank_bic", ""),
+        "bank_name": settings.get("bank_name", ""),
+    }
+
+@api_router.post("/invoices/{invoice_id}/tranches/{tranche_id}/mark-paid")
+async def mark_tranche_paid_manually(invoice_id: str, tranche_id: str,
+                                       body: MarkTranchePaidRequest, request: Request):
+    await require_admin(request)
+    if body.payment_method not in ("virement", "especes", "cheque"):
+        raise HTTPException(400, "Méthode de paiement invalide")
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(404, "Facture introuvable")
+    tranche = next((t for t in inv.get("payment_tranches", []) if t["id"] == tranche_id), None)
+    if not tranche:
+        raise HTTPException(404, "Tranche introuvable")
+    if tranche["status"] == "paid":
+        raise HTTPException(400, "Cette tranche est déjà payée")
+
+    tx_id = str(uuid.uuid4())
+    now_iso = datetime.now(timezone.utc).isoformat()
+    await db.payment_transactions.insert_one({
+        "id": tx_id, "invoice_id": invoice_id, "tranche_id": tranche_id,
+        "invoice_number": inv["invoice_number"], "tranche_label": tranche["label"],
+        "client_id": inv.get("client_id"), "client_name": inv["client_name"],
+        "amount": float(tranche["amount"]), "currency": "eur",
+        "session_id": f"manual_{tx_id}", "payment_status": "paid",
+        "payment_method": body.payment_method,
+        "created_at": now_iso, "paid_at": now_iso,
+    })
+    await _mark_tranche_paid(invoice_id, tranche_id, payment_method=body.payment_method)
+    return {"message": "Tranche marquée comme payée"}
+
 @api_router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
     body = await request.body()
@@ -839,7 +888,7 @@ async def stripe_webhook(request: Request):
         logger.error(f"Webhook error: {e}")
     return {"received": True}
 
-async def _mark_tranche_paid(invoice_id: str, tranche_id: str):
+async def _mark_tranche_paid(invoice_id: str, tranche_id: str, payment_method: str = "carte"):
     inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not inv:
         return
@@ -848,6 +897,7 @@ async def _mark_tranche_paid(invoice_id: str, tranche_id: str):
         if t["id"] == tranche_id:
             t["status"] = "paid"
             t["paid_at"] = datetime.now(timezone.utc).isoformat()
+            t["payment_method"] = payment_method
     all_paid = all(t["status"] == "paid" for t in tranches) if tranches else False
     any_paid = any(t["status"] == "paid" for t in tranches)
     new_status = "paid" if all_paid else ("partial" if any_paid else "pending")

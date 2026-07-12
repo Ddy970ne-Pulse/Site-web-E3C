@@ -44,6 +44,16 @@ const SECTIONS = [
       { name: "paypal_client_secret", label: "Client Secret", placeholder: "" },
     ],
   },
+  {
+    title: "Virement bancaire — vos coordonnées",
+    help: "Affichées aux clients qui choisissent de payer par virement. Ce ne sont pas des secrets — elles doivent être communiquées, contrairement aux clés ci-dessus.",
+    fields: [
+      { name: "bank_account_holder", label: "Titulaire du compte", placeholder: "E3C — Entreprise de Constructions" },
+      { name: "bank_iban", label: "IBAN", placeholder: "FR76 XXXX XXXX XXXX XXXX XXXX XXX" },
+      { name: "bank_bic", label: "BIC / SWIFT", placeholder: "XXXXXXXX" },
+      { name: "bank_name", label: "Banque", placeholder: "Nom de votre banque" },
+    ],
+  },
 ];
 
 export default function SettingsPanel() {

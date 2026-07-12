@@ -4,6 +4,8 @@ import { Plus, Trash2, Save, ArrowLeft, FileText, Zap } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+const PAYMENT_METHOD_LABELS = { carte: "Carte", virement: "Virement", especes: "Espèces", cheque: "Chèque" };
+
 const emptyTranche = (index) => ({
   id: crypto.randomUUID(),
   label: `Tranche ${index + 1}`,
@@ -71,6 +73,19 @@ export default function InvoiceDetail({ invoice, onBack }) {
     } catch (err) {
       setError(err.response?.data?.detail || "Erreur lors de la sauvegarde");
     } finally { setSaving(false); }
+  };
+
+  const markPaidManually = async (trancheId, method) => {
+    if (!method) return;
+    setError(""); setMsg("");
+    try {
+      await axios.post(`${API}/invoices/${inv.id}/tranches/${trancheId}/mark-paid`,
+        { payment_method: method }, { withCredentials: true });
+      setTranches(p => p.map(t => t.id === trancheId ? { ...t, status: "paid", payment_method: method } : t));
+      setMsg("Tranche marquée comme payée.");
+    } catch (err) {
+      setError(err.response?.data?.detail || "Erreur lors du pointage du paiement");
+    }
   };
 
   return (
@@ -147,10 +162,23 @@ export default function InvoiceDetail({ invoice, onBack }) {
                   disabled={t.status === "paid"}
                   className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 text-xs rounded-sm disabled:opacity-60" />
               </div>
-              <div className="col-span-2">
-                <span className={`text-xs font-semibold px-2 py-1 rounded-sm ${t.status === "paid" ? "text-green-400 bg-green-400/10" : "text-yellow-400 bg-yellow-400/10"}`}>
-                  {t.status === "paid" ? "Payé" : "En attente"}
-                </span>
+              <div className="col-span-12 md:col-span-2">
+                {t.status === "paid" ? (
+                  <span className="text-xs font-semibold px-2 py-1 rounded-sm text-green-400 bg-green-400/10">
+                    Payé{t.payment_method ? ` · ${PAYMENT_METHOD_LABELS[t.payment_method] || t.payment_method}` : ""}
+                  </span>
+                ) : (
+                  <select
+                    defaultValue=""
+                    data-testid={`mark-paid-${t.id}`}
+                    onChange={e => markPaidManually(t.id, e.target.value)}
+                    className="w-full bg-yellow-400/10 text-yellow-400 text-xs font-semibold px-2 py-1.5 rounded-sm border-0">
+                    <option value="" disabled>En attente</option>
+                    <option value="virement">Marquer payé — Virement</option>
+                    <option value="especes">Marquer payé — Espèces</option>
+                    <option value="cheque">Marquer payé — Chèque</option>
+                  </select>
+                )}
               </div>
               <div className="col-span-12 md:col-span-1 flex justify-end">
                 {t.status !== "paid" && tranches.length > 1 && (

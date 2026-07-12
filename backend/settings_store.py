@@ -25,6 +25,12 @@ FIELDS = [
     ("paypal_client_id", "PAYPAL_CLIENT_ID", False),
     ("paypal_client_secret", "PAYPAL_CLIENT_SECRET", True),
     ("paypal_mode", "PAYPAL_MODE", False),  # "sandbox" ou "live"
+    # Coordonnées bancaires E3C affichées aux clients pour le virement manuel.
+    # Pas des secrets (destinées à être communiquées) — non chiffrées, non masquées.
+    ("bank_account_holder", "BANK_ACCOUNT_HOLDER", False),
+    ("bank_iban", "BANK_IBAN", False),
+    ("bank_bic", "BANK_BIC", False),
+    ("bank_name", "BANK_NAME", False),
 ]
 FIELD_NAMES = {name for name, _, _ in FIELDS}
 ENCRYPTED_FIELDS = {name for name, _, enc in FIELDS if enc}
