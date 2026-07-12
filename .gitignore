@@ -30,6 +30,9 @@ next-env.d.ts
 dist/
 dist
 
+# Scratch files handed to the user, not part of the app
+/images-a-retravailler/
+
 # Local dev data (MongoDB, etc.)
 .devdata/
 
