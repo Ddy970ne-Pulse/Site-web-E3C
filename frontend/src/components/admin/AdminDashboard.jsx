@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Users, FileText, Receipt, CreditCard, Plus, LogOut, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Eye, Send, RefreshCw, TrendingUp, Inbox, Image, MessageSquare, Trash2, Upload, Activity } from "lucide-react";
+import { Users, FileText, Receipt, CreditCard, Plus, LogOut, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Eye, Send, RefreshCw, TrendingUp, Inbox, Image, MessageSquare, Trash2, Upload, Activity, Settings } from "lucide-react";
 import QuoteForm from "@/components/admin/QuoteForm";
 import InvoiceDetail from "@/components/admin/InvoiceDetail";
 import DiagnosticsPanel from "@/components/admin/DiagnosticsPanel";
+import SettingsPanel from "@/components/admin/SettingsPanel";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ax = () => axios.create({ withCredentials: true });
@@ -319,7 +320,7 @@ function GalleryTab({ images, onRefresh }) {
                 <Trash2 size={13} className="text-white" />
               </button>
               <div>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]">{img.category}</span>
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[#D4AF37]">{img.category}</span>
                 <p className="text-white text-xs font-medium leading-snug">{img.label}</p>
               </div>
             </div>
@@ -476,6 +477,7 @@ export default function AdminDashboard() {
     { id: "invoices", label: "Factures", icon: Receipt },
     { id: "payments", label: "Paiements", icon: CreditCard },
     { id: "diagnostics", label: "Diagnostic", icon: Activity },
+    { id: "settings", label: "Paramètres", icon: Settings },
   ];
 
   return (
@@ -948,6 +950,7 @@ export default function AdminDashboard() {
         )}
 
         {tab === "diagnostics" && <DiagnosticsPanel />}
+        {tab === "settings" && <SettingsPanel />}
       </main>
     </div>
   );

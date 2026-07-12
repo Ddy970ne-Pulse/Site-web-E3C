@@ -11,6 +11,7 @@ from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_auth_requests
 import stripe as stripe_sdk
 import diagnostics
+import settings_store
 import httpx
 import os, logging, uuid, bcrypt, jwt, asyncio, secrets, io, shutil
 from pydantic import BaseModel, EmailStr, Field
@@ -48,16 +49,16 @@ JWT_SECRET = require_env("JWT_SECRET", min_length=32)
 JWT_ALGORITHM = "HS256"
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@e3c-construction.com")
 ADMIN_PASSWORD = require_env("ADMIN_PASSWORD", min_length=12)
-STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
-STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-stripe_sdk.api_key = STRIPE_API_KEY
-BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+# Defaults used only when nothing is configured yet in the admin Settings panel
+# (settings_store.py falls back to these env vars). Read settings_store.get_settings(db)
+# for the current value at each use — never these constants directly, since an admin
+# can change them at runtime without a restart.
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "noreply@e3c-construction.com")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
-FACEBOOK_APP_ID = os.environ.get("FACEBOOK_APP_ID", "")
-FACEBOOK_APP_SECRET = os.environ.get("FACEBOOK_APP_SECRET", "")
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
+# Required so integration secrets (Stripe/Brevo/Facebook/PayPal keys) can be stored
+# encrypted in the DB when set from the admin Settings panel.
+require_env("SETTINGS_ENCRYPTION_KEY", min_length=32)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -118,13 +119,15 @@ async def require_client(request: Request) -> dict:
 
 # ─── Email helper (Brevo) ───────────────────────────────────────────────────
 async def send_email(to_email: str, subject: str, html: str):
-    if not BREVO_API_KEY:
+    settings = await settings_store.get_settings(db)
+    brevo_api_key = settings.get("brevo_api_key", "")
+    if not brevo_api_key:
         logger.info(f"[EMAIL SKIPPED - No Brevo key] To: {to_email} | Subject: {subject}")
         return
     try:
         async with httpx.AsyncClient() as c:
             await c.post("https://api.brevo.com/v3/smtp/email",
-                headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
+                headers={"api-key": brevo_api_key, "Content-Type": "application/json"},
                 json={"sender": {"email": SENDER_EMAIL, "name": "E3C Constructions"},
                       "to": [{"email": to_email}], "subject": subject, "htmlContent": html},
                 timeout=10)
@@ -158,6 +161,17 @@ class GoogleAuthRequest(BaseModel):
 
 class FacebookAuthRequest(BaseModel):
     access_token: str
+
+class SettingsUpdate(BaseModel):
+    stripe_api_key: Optional[str] = None
+    stripe_webhook_secret: Optional[str] = None
+    brevo_api_key: Optional[str] = None
+    google_client_id: Optional[str] = None
+    facebook_app_id: Optional[str] = None
+    facebook_app_secret: Optional[str] = None
+    paypal_client_id: Optional[str] = None
+    paypal_client_secret: Optional[str] = None
+    paypal_mode: Optional[str] = None
 
 class LineItem(BaseModel):
     description: str
@@ -278,13 +292,9 @@ async def startup():
     await db.invoices.create_index("client_id")
     await db.payment_transactions.create_index("session_id")
     await seed_admin()
-    diagnostics_check_kwargs = dict(
-        stripe_sdk=stripe_sdk, stripe_api_key=STRIPE_API_KEY,
-        stripe_webhook_secret=STRIPE_WEBHOOK_SECRET, brevo_api_key=BREVO_API_KEY,
-        uploads_dir=UPLOADS_DIR, google_client_id=GOOGLE_CLIENT_ID,
-    )
     app.state.auto_fix_task = asyncio.create_task(diagnostics.periodic_auto_fix_loop(
-        db, check_kwargs=diagnostics_check_kwargs, send_alert=send_email, admin_email=ADMIN_EMAIL,
+        db, stripe_sdk=stripe_sdk, uploads_dir=UPLOADS_DIR,
+        get_settings=settings_store.get_settings, send_alert=send_email, admin_email=ADMIN_EMAIL,
     ))
 
 @app.on_event("shutdown")
@@ -350,12 +360,14 @@ async def me(request: Request):
 
 @api_router.post("/auth/google")
 async def google_auth(body: GoogleAuthRequest, response: Response):
-    if not GOOGLE_CLIENT_ID:
+    settings = await settings_store.get_settings(db)
+    google_client_id = settings.get("google_client_id", "")
+    if not google_client_id:
         raise HTTPException(503, "Connexion Google non configurée")
     try:
         idinfo = await asyncio.to_thread(
             google_id_token.verify_oauth2_token,
-            body.credential, google_auth_requests.Request(), GOOGLE_CLIENT_ID,
+            body.credential, google_auth_requests.Request(), google_client_id,
         )
     except ValueError:
         raise HTTPException(401, "Jeton Google invalide")
@@ -370,17 +382,20 @@ async def google_auth(body: GoogleAuthRequest, response: Response):
 
 @api_router.post("/auth/facebook")
 async def facebook_auth(body: FacebookAuthRequest, response: Response):
-    if not FACEBOOK_APP_ID or not FACEBOOK_APP_SECRET:
+    settings = await settings_store.get_settings(db)
+    facebook_app_id = settings.get("facebook_app_id", "")
+    facebook_app_secret = settings.get("facebook_app_secret", "")
+    if not facebook_app_id or not facebook_app_secret:
         raise HTTPException(503, "Connexion Facebook non configurée")
     try:
         async with httpx.AsyncClient(timeout=10) as c:
             debug = await c.get("https://graph.facebook.com/debug_token", params={
                 "input_token": body.access_token,
-                "access_token": f"{FACEBOOK_APP_ID}|{FACEBOOK_APP_SECRET}",
+                "access_token": f"{facebook_app_id}|{facebook_app_secret}",
             })
             debug.raise_for_status()
             debug_data = debug.json().get("data", {})
-            if not debug_data.get("is_valid") or debug_data.get("app_id") != FACEBOOK_APP_ID:
+            if not debug_data.get("is_valid") or debug_data.get("app_id") != facebook_app_id:
                 raise HTTPException(401, "Jeton Facebook invalide")
 
             profile = await c.get("https://graph.facebook.com/me", params={
@@ -441,16 +456,28 @@ async def list_clients(request: Request):
 @api_router.get("/admin/diagnostics")
 async def get_diagnostics(request: Request):
     await require_admin(request)
+    settings = await settings_store.get_settings(db)
     return await diagnostics.run_all_checks(
-        db=db, stripe_sdk=stripe_sdk, stripe_api_key=STRIPE_API_KEY,
-        stripe_webhook_secret=STRIPE_WEBHOOK_SECRET, brevo_api_key=BREVO_API_KEY,
-        uploads_dir=UPLOADS_DIR, google_client_id=GOOGLE_CLIENT_ID,
+        db=db, stripe_sdk=stripe_sdk, settings=settings, uploads_dir=UPLOADS_DIR,
     )
 
 @api_router.post("/admin/diagnostics/auto-fix")
 async def trigger_auto_fix(request: Request):
     await require_admin(request)
     return await diagnostics.run_auto_fixes(db)
+
+# ─── Settings (admin) ─────────────────────────────────────────────────────────
+@api_router.get("/admin/settings")
+async def get_settings_status(request: Request):
+    await require_admin(request)
+    return await settings_store.get_settings_status(db)
+
+@api_router.put("/admin/settings")
+async def update_settings(body: SettingsUpdate, request: Request):
+    await require_admin(request)
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    await settings_store.update_settings(db, updates)
+    return await settings_store.get_settings_status(db)
 
 # ─── Quote Routes ────────────────────────────────────────────────────────────
 @api_router.get("/quotes")
@@ -725,9 +752,15 @@ async def create_checkout(body: CheckoutRequest, request: Request):
     if existing_tx:
         return {"checkout_url": existing_tx.get("checkout_url", ""), "session_id": existing_tx["session_id"]}
 
+    settings = await settings_store.get_settings(db)
+    stripe_api_key = settings.get("stripe_api_key", "")
+    if not stripe_api_key:
+        raise HTTPException(503, "Paiement par carte non configuré")
+
     success_url = f"{body.origin_url}/espace-client?payment=success&session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{body.origin_url}/espace-client?payment=cancelled"
     session = await stripe_sdk.checkout.Session.create_async(
+        api_key=stripe_api_key,
         mode="payment",
         line_items=[{
             "price_data": {
@@ -763,7 +796,9 @@ async def get_payment_status(session_id: str, request: Request):
     if user["role"] == "client" and tx["client_id"] != user["id"]:
         raise HTTPException(403, "Accès refusé")
 
-    session = await stripe_sdk.checkout.Session.retrieve_async(session_id)
+    settings = await settings_store.get_settings(db)
+    session = await stripe_sdk.checkout.Session.retrieve_async(
+        session_id, api_key=settings.get("stripe_api_key", ""))
 
     if session.payment_status == "paid" and tx["payment_status"] != "paid":
         await db.payment_transactions.update_one({"session_id": session_id},
@@ -784,11 +819,13 @@ async def list_payments(request: Request):
 async def stripe_webhook(request: Request):
     body = await request.body()
     sig = request.headers.get("Stripe-Signature", "")
-    if not STRIPE_WEBHOOK_SECRET:
+    settings = await settings_store.get_settings(db)
+    webhook_secret = settings.get("stripe_webhook_secret", "")
+    if not webhook_secret:
         logger.error("STRIPE_WEBHOOK_SECRET non configuré — webhook ignoré (payload non vérifié)")
         return {"received": True}
     try:
-        event = stripe_sdk.Webhook.construct_event(body, sig, STRIPE_WEBHOOK_SECRET)
+        event = stripe_sdk.Webhook.construct_event(body, sig, webhook_secret)
         if event.type == "checkout.session.completed":
             session = event.data.object
             if session.get("payment_status") == "paid":

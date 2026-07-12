@@ -73,18 +73,20 @@ def check_optional_config(name: str, value: str, disabled_detail: str) -> dict:
     return {"status": "ok"} if value else {"status": "disabled", "detail": disabled_detail}
 
 
-async def run_all_checks(*, db, stripe_sdk, stripe_api_key, stripe_webhook_secret,
-                          brevo_api_key, uploads_dir, google_client_id) -> dict:
+async def run_all_checks(*, db, stripe_sdk, settings: dict, uploads_dir) -> dict:
+    """`settings` vient de settings_store.get_settings(db) — lu à chaque appel,
+    donc reflète toujours la configuration actuelle (DB ou variable d'environnement)."""
     return {
         "checked_at": datetime.now(timezone.utc).isoformat(),
         "checks": {
             "database": await check_database(db),
-            "stripe_api": await check_stripe(stripe_sdk, stripe_api_key),
-            "stripe_webhook": check_stripe_webhook(stripe_webhook_secret),
-            "email": await check_email(brevo_api_key),
+            "stripe_api": await check_stripe(stripe_sdk, settings.get("stripe_api_key", "")),
+            "stripe_webhook": check_stripe_webhook(settings.get("stripe_webhook_secret", "")),
+            "email": await check_email(settings.get("brevo_api_key", "")),
             "uploads_storage": check_uploads_storage(uploads_dir),
             "google_auth": check_optional_config(
-                "google_auth", google_client_id, "GOOGLE_CLIENT_ID non configuré — bouton Google masqué"),
+                "google_auth", settings.get("google_client_id", ""),
+                "GOOGLE_CLIENT_ID non configuré — bouton Google masqué"),
         },
     }
 
@@ -132,15 +134,17 @@ def checks_needing_alert(checks: dict, alert_state: dict, now: datetime) -> list
     return to_alert
 
 
-async def periodic_auto_fix_loop(db, *, check_kwargs: dict = None, send_alert=None,
-                                   admin_email: str = None,
+async def periodic_auto_fix_loop(db, *, stripe_sdk=None, uploads_dir=None, get_settings=None,
+                                   send_alert=None, admin_email: str = None,
                                    interval_seconds: int = AUTO_FIX_INTERVAL_SECONDS):
     """Boucle en tâche de fond du process FastAPI — aucune infra externe (cron/Celery)
     requise. S'arrête proprement si la tâche est annulée (arrêt de l'app).
 
-    Si check_kwargs/send_alert/admin_email sont fournis, envoie aussi une alerte
-    (email, throttlée à une fois toutes les ALERT_COOLDOWN_HOURS par contrôle) quand
-    un contrôle passe en erreur — DB, Stripe, email ou stockage en panne."""
+    `get_settings` est un callable async (typiquement settings_store.get_settings) relu
+    à chaque itération, pour que les identifiants modifiés depuis l'admin soient pris en
+    compte sans redémarrage. Si stripe_sdk/uploads_dir/get_settings/send_alert/admin_email
+    sont fournis, envoie aussi une alerte (email, throttlée à une fois toutes les
+    ALERT_COOLDOWN_HOURS par contrôle) quand un contrôle passe en erreur."""
     import asyncio
     alert_state = {}
     while True:
@@ -149,8 +153,10 @@ async def periodic_auto_fix_loop(db, *, check_kwargs: dict = None, send_alert=No
             result = await run_auto_fixes(db)
             logger.info(f"Auto-fix périodique exécuté: {result}")
 
-            if check_kwargs and send_alert and admin_email:
-                checks_result = await run_all_checks(db=db, **check_kwargs)
+            if stripe_sdk and get_settings and send_alert and admin_email:
+                settings = await get_settings(db)
+                checks_result = await run_all_checks(
+                    db=db, stripe_sdk=stripe_sdk, settings=settings, uploads_dir=uploads_dir)
                 for name, res in checks_needing_alert(
                         checks_result["checks"], alert_state, datetime.now(timezone.utc)):
                     label = CHECK_LABELS_FR.get(name, name)
