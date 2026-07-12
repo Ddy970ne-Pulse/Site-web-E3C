@@ -97,16 +97,16 @@ export default function CGV() {
             <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-base mb-3">7. Garanties légales</h2>
             <div className="space-y-3">
               <div className="bg-white dark:bg-[#121212] border border-black/7 dark:border-white/5 rounded-sm p-4">
-                <p className="text-[#1A1A1A] dark:text-gray-200 font-semibold text-xs uppercase tracking-wider mb-1">Garantie décennale (10 ans)</p>
-                <p className="text-xs">Couvre les dommages qui compromettent la solidité de l'ouvrage ou le rendent impropre à sa destination (art. 1792 du Code civil).</p>
+                <p className="text-[#1A1A1A] dark:text-gray-200 font-semibold text-sm uppercase tracking-wider mb-1">Garantie décennale (10 ans)</p>
+                <p className="text-sm">Couvre les dommages qui compromettent la solidité de l'ouvrage ou le rendent impropre à sa destination (art. 1792 du Code civil).</p>
               </div>
               <div className="bg-white dark:bg-[#121212] border border-black/7 dark:border-white/5 rounded-sm p-4">
-                <p className="text-[#1A1A1A] dark:text-gray-200 font-semibold text-xs uppercase tracking-wider mb-1">Garantie de parfait achèvement (1 an)</p>
-                <p className="text-xs">Couvre tous les désordres signalés lors de la réception ou apparaissant dans l'année suivante.</p>
+                <p className="text-[#1A1A1A] dark:text-gray-200 font-semibold text-sm uppercase tracking-wider mb-1">Garantie de parfait achèvement (1 an)</p>
+                <p className="text-sm">Couvre tous les désordres signalés lors de la réception ou apparaissant dans l'année suivante.</p>
               </div>
               <div className="bg-white dark:bg-[#121212] border border-black/7 dark:border-white/5 rounded-sm p-4">
-                <p className="text-[#1A1A1A] dark:text-gray-200 font-semibold text-xs uppercase tracking-wider mb-1">Garantie biennale (2 ans)</p>
-                <p className="text-xs">Couvre les éléments d'équipement dissociables de l'ouvrage.</p>
+                <p className="text-[#1A1A1A] dark:text-gray-200 font-semibold text-sm uppercase tracking-wider mb-1">Garantie biennale (2 ans)</p>
+                <p className="text-sm">Couvre les éléments d'équipement dissociables de l'ouvrage.</p>
               </div>
             </div>
           </section>

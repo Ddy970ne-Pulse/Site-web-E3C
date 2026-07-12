@@ -94,7 +94,7 @@ export default function Gallery() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-250">
                 <div className="absolute bottom-0 left-0 right-0 p-3">
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37] block mb-0.5">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-[#D4AF37] block mb-0.5">
                     {img.tag}
                   </span>
                   <span className="text-white text-xs font-medium leading-snug">{img.label}</span>
@@ -139,7 +139,7 @@ export default function Gallery() {
               className="w-full max-h-[80vh] object-contain rounded-sm"
             />
             <div className="mt-3 flex items-center gap-3">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] border border-[#D4AF37]/30 px-2 py-1 rounded-sm">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-[#D4AF37] border border-[#D4AF37]/30 px-2 py-1 rounded-sm">
                 {lightbox.tag}
               </span>
               <span className="text-white text-sm font-medium">{lightbox.label}</span>

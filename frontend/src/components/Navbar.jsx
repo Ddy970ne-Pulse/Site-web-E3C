@@ -72,7 +72,7 @@ export default function Navbar({ whatsapp }) {
               <p className="font-outfit font-bold text-[#1A1A1A] dark:text-white text-sm leading-tight group-hover:text-[#D4AF37] transition-colors">
                 E3C — Entreprise de constructions
               </p>
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest">Guadeloupe · BTP</p>
+              <p className="text-[11px] text-gray-500 uppercase tracking-widest">Guadeloupe · BTP</p>
             </div>
           </Link>
 
