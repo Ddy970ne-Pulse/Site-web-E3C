@@ -27,10 +27,10 @@ function CheckRow({ name, result }) {
   return (
     <div className="flex items-start justify-between gap-4 py-3 border-b border-white/5 last:border-0">
       <div>
-        <p className="text-sm text-white font-medium">{CHECK_LABELS[name] || name}</p>
-        {result.detail && <p className="text-xs text-gray-500 mt-0.5">{result.detail}</p>}
+        <p className="text-base text-white font-medium">{CHECK_LABELS[name] || name}</p>
+        {result.detail && <p className="text-sm text-gray-500 mt-0.5">{result.detail}</p>}
       </div>
-      <div className={`flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap ${style.color}`}>
+      <div className={`flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap ${style.color}`}>
         <Icon size={14} /> {style.label}
       </div>
     </div>
@@ -76,34 +76,34 @@ export default function DiagnosticsPanel() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-outfit font-bold text-2xl text-white">Diagnostic système</h1>
+        <h1 className="font-outfit font-bold text-3xl text-white">Diagnostic système</h1>
         <div className="flex gap-2">
           <button onClick={refresh} disabled={loading}
-            className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-gray-300 border border-white/10 rounded-sm hover:bg-white/5 disabled:opacity-50">
+            className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-300 border border-white/10 rounded-sm hover:bg-white/5 disabled:opacity-50">
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Actualiser
           </button>
           <button onClick={runAutoFix} disabled={fixing}
             data-testid="run-auto-fix"
-            className="flex items-center gap-2 px-3 py-2 text-xs font-semibold bg-[#D4AF37] text-black rounded-sm hover:bg-[#E6C65A] disabled:opacity-50">
+            className="flex items-center gap-2 px-3 py-2 text-sm font-semibold bg-[#D4AF37] text-black rounded-sm hover:bg-[#E6C65A] disabled:opacity-50">
             <Wrench size={14} /> {fixing ? "Réparation..." : "Lancer l'auto-réparation"}
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 mb-5 text-sm rounded-sm">{error}</div>
+        <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 mb-5 text-base rounded-sm">{error}</div>
       )}
 
       {data && !hasIssues && (
-        <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-3 mb-5 text-sm rounded-sm">
+        <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-3 mb-5 text-base rounded-sm">
           Tout fonctionne normalement.
         </div>
       )}
 
       {fixResult && (
         <div className="bg-white/5 border border-white/10 p-4 mb-5 rounded-sm">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Résultat de la réparation automatique</p>
-          <p className="text-sm text-gray-300">
+          <p className="text-sm text-gray-500 uppercase tracking-wider mb-2">Résultat de la réparation automatique</p>
+          <p className="text-base text-gray-300">
             Sessions de paiement expirées nettoyées : {fixResult.results?.expired_payment_sessions?.fixed_count ?? 0}
           </p>
         </div>
@@ -111,18 +111,18 @@ export default function DiagnosticsPanel() {
 
       <div className="bg-[#121212] border border-white/5 rounded-sm p-5">
         {loading && !data ? (
-          <p className="text-sm text-gray-500">Chargement du diagnostic...</p>
+          <p className="text-base text-gray-500">Chargement du diagnostic...</p>
         ) : data ? (
           <>
             {Object.entries(data.checks).map(([name, result]) => (
               <CheckRow key={name} name={name} result={result} />
             ))}
-            <p className="text-xs text-gray-600 mt-4">Dernière vérification : {new Date(data.checked_at).toLocaleString("fr-FR")}</p>
+            <p className="text-sm text-gray-600 mt-4">Dernière vérification : {new Date(data.checked_at).toLocaleString("fr-FR")}</p>
           </>
         ) : null}
       </div>
 
-      <p className="text-xs text-gray-600 mt-4">
+      <p className="text-sm text-gray-600 mt-4">
         L'auto-réparation ne corrige que des problèmes sûrs et réversibles (ex : sessions de paiement expirées).
         Une réparation identique s'exécute aussi automatiquement chaque heure en arrière-plan.
         Les erreurs (base de données, Stripe, email) nécessitent une intervention manuelle.

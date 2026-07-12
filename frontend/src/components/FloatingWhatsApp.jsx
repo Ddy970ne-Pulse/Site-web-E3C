@@ -10,7 +10,7 @@ export default function FloatingWhatsApp({ whatsapp }) {
     <div className="whatsapp-float">
       {/* Tooltip */}
       {tooltip && (
-        <div className="absolute bottom-full right-0 mb-3 bg-white text-gray-900 text-xs font-semibold px-4 py-2 rounded-lg shadow-xl whitespace-nowrap">
+        <div className="absolute bottom-full right-0 mb-3 bg-white text-gray-900 text-sm font-semibold px-4 py-2 rounded-lg shadow-xl whitespace-nowrap">
           Devis gratuit sur WhatsApp
           <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white" />
         </div>

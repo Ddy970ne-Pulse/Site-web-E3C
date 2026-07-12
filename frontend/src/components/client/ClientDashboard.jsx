@@ -20,7 +20,7 @@ const STATUS_LABELS = {
 
 function StatusBadge({ status }) {
   const s = STATUS_LABELS[status] || { label: status, color: "text-gray-400 bg-gray-400/10" };
-  return <span className={`text-xs font-semibold px-2 py-1 rounded-sm uppercase tracking-wide ${s.color}`}>{s.label}</span>;
+  return <span className={`text-sm font-semibold px-2 py-1 rounded-sm uppercase tracking-wide ${s.color}`}>{s.label}</span>;
 }
 
 export default function ClientDashboard() {
@@ -175,14 +175,14 @@ export default function ClientDashboard() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-[#D4AF37] flex items-center justify-center">
-              <span className="font-outfit font-black text-black text-xs">E3C</span>
+              <span className="font-outfit font-black text-black text-sm">E3C</span>
             </div>
             <div>
-              <p className="font-outfit font-bold text-white text-sm">Espace Client</p>
-              <p className="text-xs text-gray-500 hidden sm:block">{user?.name}</p>
+              <p className="font-outfit font-bold text-white text-base">Espace Client</p>
+              <p className="text-sm text-gray-500 hidden sm:block">{user?.name}</p>
             </div>
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-2 text-gray-400 hover:text-red-400 text-sm transition-colors">
+          <button onClick={handleLogout} className="flex items-center gap-2 text-gray-400 hover:text-red-400 text-base transition-colors">
             <LogOut size={15}/> <span className="hidden sm:inline">Déconnexion</span>
           </button>
         </div>
@@ -191,13 +191,13 @@ export default function ClientDashboard() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* Welcome */}
         <div className="mb-6">
-          <h1 className="font-outfit font-bold text-xl text-white">Bonjour, {user?.name} 👋</h1>
-          <p className="text-gray-400 text-sm mt-1">Gérez vos devis et factures E3C — Entreprise de constructions</p>
+          <h1 className="font-outfit font-bold text-2xl text-white">Bonjour, {user?.name} 👋</h1>
+          <p className="text-gray-400 text-base mt-1">Gérez vos devis et factures E3C — Entreprise de constructions</p>
         </div>
 
         {/* Payment notification */}
         {paymentMsg && (
-          <div className={`flex items-center gap-3 p-4 mb-5 rounded-sm border text-sm ${paymentMsg.includes("réussi") ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"}`}>
+          <div className={`flex items-center gap-3 p-4 mb-5 rounded-sm border text-base ${paymentMsg.includes("réussi") ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"}`}>
             {paymentMsg.includes("réussi") ? <CheckCircle size={16}/> : <AlertCircle size={16}/>}
             {paymentMsg}
           </div>
@@ -209,9 +209,9 @@ export default function ClientDashboard() {
             const Icon = t.icon;
             return (
               <button key={t.id} onClick={() => { setTab(t.id); setSelectedQuote(null); setSelectedInvoice(null); }}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors -mb-px ${tab === t.id ? "border-[#D4AF37] text-[#D4AF37]" : "border-transparent text-gray-400 hover:text-white"}`}>
+                className={`flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors -mb-px ${tab === t.id ? "border-[#D4AF37] text-[#D4AF37]" : "border-transparent text-gray-400 hover:text-white"}`}>
                 <Icon size={15}/> {t.label}
-                {t.badge > 0 && <span className="bg-[#D4AF37] text-black text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">{t.badge}</span>}
+                {t.badge > 0 && <span className="bg-[#D4AF37] text-black text-sm font-bold w-5 h-5 flex items-center justify-center rounded-full">{t.badge}</span>}
               </button>
             );
           })}
@@ -232,19 +232,19 @@ export default function ClientDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-3 mb-1">
-                          <span className="text-[#D4AF37] font-outfit font-bold text-base">{q.quote_number}</span>
+                          <span className="text-[#D4AF37] font-outfit font-bold text-lg">{q.quote_number}</span>
                           <StatusBadge status={q.status}/>
                         </div>
-                        <p className="text-white text-sm">{q.project_description}</p>
-                        <p className="text-gray-400 text-xs mt-1">Créé le {new Date(q.created_at).toLocaleDateString("fr-FR")}</p>
+                        <p className="text-white text-base">{q.project_description}</p>
+                        <p className="text-gray-400 text-sm mt-1">Créé le {new Date(q.created_at).toLocaleDateString("fr-FR")}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-white font-bold text-lg">{q.total_ttc?.toFixed(2)} €</p>
-                        <p className="text-gray-400 text-xs">TTC</p>
+                        <p className="text-white font-bold text-xl">{q.total_ttc?.toFixed(2)} €</p>
+                        <p className="text-gray-400 text-sm">TTC</p>
                       </div>
                     </div>
                     {q.status === "sent" && (
-                      <div className="mt-3 pt-3 border-t border-white/5 flex items-center gap-2 text-blue-400 text-xs font-semibold">
+                      <div className="mt-3 pt-3 border-t border-white/5 flex items-center gap-2 text-blue-400 text-sm font-semibold">
                         <AlertCircle size={13}/> En attente de votre signature — Cliquez pour consulter
                       </div>
                     )}
@@ -270,52 +270,52 @@ export default function ClientDashboard() {
                 <div className="p-5 flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-3 mb-1">
-                      <span className="text-[#D4AF37] font-outfit font-bold text-base">{inv.invoice_number}</span>
+                      <span className="text-[#D4AF37] font-outfit font-bold text-lg">{inv.invoice_number}</span>
                       <StatusBadge status={inv.status}/>
                     </div>
-                    <p className="text-white text-sm">{inv.project_description}</p>
-                    <p className="text-gray-400 text-xs mt-1">Créé le {new Date(inv.created_at).toLocaleDateString("fr-FR")}</p>
+                    <p className="text-white text-base">{inv.project_description}</p>
+                    <p className="text-gray-400 text-sm mt-1">Créé le {new Date(inv.created_at).toLocaleDateString("fr-FR")}</p>
                   </div>
                   <div className="text-right flex flex-col items-end gap-2">
-                    <p className="text-white font-bold text-lg">{inv.total_ttc?.toFixed(2)} €</p>
+                    <p className="text-white font-bold text-xl">{inv.total_ttc?.toFixed(2)} €</p>
                     <a href={`${API}/invoices/${inv.id}/pdf`} target="_blank" rel="noreferrer"
-                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#D4AF37] transition-colors border border-white/10 px-2 py-1 rounded-sm">
+                      className="flex items-center gap-1 text-sm text-gray-400 hover:text-[#D4AF37] transition-colors border border-white/10 px-2 py-1 rounded-sm">
                       <Download size={11}/> PDF
                     </a>
                   </div>
                 </div>
                 {inv.payment_tranches?.length > 0 && (
                   <div className="border-t border-white/5 px-5 pb-5">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mt-4 mb-3 font-semibold">Calendrier de règlement</p>
+                    <p className="text-sm text-gray-500 uppercase tracking-wider mt-4 mb-3 font-semibold">Calendrier de règlement</p>
                     <div className="space-y-2">
                       {inv.payment_tranches.map(t => (
                         <div key={t.id} className="bg-white/3 border border-white/5 rounded-sm overflow-hidden">
                           <div className="flex items-center justify-between px-4 py-3">
                             <div>
-                              <p className="text-white text-sm font-medium">{t.label}</p>
-                              <p className="text-gray-400 text-xs">Échéance : {t.due_date ? new Date(t.due_date).toLocaleDateString("fr-FR") : "—"}</p>
+                              <p className="text-white text-base font-medium">{t.label}</p>
+                              <p className="text-gray-400 text-sm">Échéance : {t.due_date ? new Date(t.due_date).toLocaleDateString("fr-FR") : "—"}</p>
                             </div>
                             <div className="flex items-center gap-3">
                               <span className="text-white font-bold">{t.amount?.toFixed(2)} €</span>
                               {t.status === "paid" ? (
-                                <span className="flex items-center gap-1 text-green-400 text-xs font-semibold">
+                                <span className="flex items-center gap-1 text-green-400 text-sm font-semibold">
                                   <CheckCircle size={13}/> Payé
                                 </span>
                               ) : (
                                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
                                   <button onClick={() => toggleBankTransfer(t)}
                                     data-testid={`bank-transfer-tranche-${t.id}`}
-                                    className="flex items-center gap-1 border border-white/15 text-gray-300 font-semibold text-xs px-3 py-1.5 hover:border-[#D4AF37]/50 hover:text-[#D4AF37] transition-colors rounded-sm">
+                                    className="flex items-center gap-1 border border-white/15 text-gray-300 font-semibold text-sm px-3 py-1.5 hover:border-[#D4AF37]/50 hover:text-[#D4AF37] transition-colors rounded-sm">
                                     <Landmark size={12}/> Virement
                                   </button>
                                   <button onClick={() => payTranchePayPal(inv, t)}
                                     data-testid={`paypal-tranche-${t.id}`}
-                                    className="flex items-center gap-1 bg-[#0070BA] text-white font-bold text-xs px-3 py-1.5 hover:bg-[#005ea6] transition-colors rounded-sm">
+                                    className="flex items-center gap-1 bg-[#0070BA] text-white font-bold text-sm px-3 py-1.5 hover:bg-[#005ea6] transition-colors rounded-sm">
                                     <Wallet size={12}/> PayPal
                                   </button>
                                   <button onClick={() => payTranche(inv, t)}
                                     data-testid={`pay-tranche-${t.id}`}
-                                    className="flex items-center gap-1 bg-[#D4AF37] text-black font-bold text-xs px-3 py-1.5 hover:bg-[#E6C65A] transition-colors rounded-sm">
+                                    className="flex items-center gap-1 bg-[#D4AF37] text-black font-bold text-sm px-3 py-1.5 hover:bg-[#E6C65A] transition-colors rounded-sm">
                                     <CreditCard size={12}/> Payer par carte
                                   </button>
                                 </div>
@@ -332,7 +332,7 @@ export default function ClientDashboard() {
                 )}
                 {inv.payment_tranches?.length === 0 && (
                   <div className="border-t border-white/5 px-5 py-3">
-                    <p className="text-gray-500 text-xs">Le calendrier de règlement sera défini prochainement par E3C.</p>
+                    <p className="text-gray-500 text-sm">Le calendrier de règlement sera défini prochainement par E3C.</p>
                   </div>
                 )}
               </div>
@@ -355,34 +355,34 @@ function QuoteDetailView({ quote, onBack, onAccept, onRefuse, loading }) {
 
   return (
     <div data-testid="quote-detail-view">
-      <button onClick={onBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm mb-5 transition-colors">
+      <button onClick={onBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-base mb-5 transition-colors">
         ← Retour à mes devis
       </button>
       <div className="bg-[#121212] border border-white/5 rounded-sm p-6">
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h2 className="font-outfit font-bold text-white text-xl">{quote.quote_number}</h2>
-            <p className="text-gray-400 text-sm mt-1">{quote.project_description}</p>
+            <h2 className="font-outfit font-bold text-white text-2xl">{quote.quote_number}</h2>
+            <p className="text-gray-400 text-base mt-1">{quote.project_description}</p>
           </div>
           <StatusBadge status={quote.status}/>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4 mb-5 text-sm">
-          <div><p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Valable jusqu'au</p>
+        <div className="grid md:grid-cols-2 gap-4 mb-5 text-base">
+          <div><p className="text-gray-500 text-sm uppercase tracking-wider mb-1">Valable jusqu'au</p>
             <p className="text-white">{quote.valid_until ? new Date(quote.valid_until).toLocaleDateString("fr-FR") : "—"}</p></div>
-          <div><p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Adresse chantier</p>
+          <div><p className="text-gray-500 text-sm uppercase tracking-wider mb-1">Adresse chantier</p>
             <p className="text-white">{quote.client_address || "—"}</p></div>
         </div>
 
         {/* Line items */}
         <div className="mb-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-3 font-semibold">Détail des prestations</p>
+          <p className="text-sm text-gray-500 uppercase tracking-wider mb-3 font-semibold">Détail des prestations</p>
           <div className="border border-white/5 rounded-sm overflow-hidden">
-            <table className="w-full text-sm">
+            <table className="w-full text-base">
               <thead className="bg-white/3">
                 <tr className="text-left">
                   {["Description", "Qté", "Prix HT", "TVA", "Total TTC"].map(h => (
-                    <th key={h} className="px-4 py-2 text-xs text-gray-400 uppercase tracking-wider">{h}</th>
+                    <th key={h} className="px-4 py-2 text-sm text-gray-400 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -402,23 +402,23 @@ function QuoteDetailView({ quote, onBack, onAccept, onRefuse, loading }) {
         </div>
 
         <div className="text-right space-y-1 mb-4">
-          <p className="text-gray-400 text-sm">Total HT : <span className="text-white">{quote.total_ht?.toFixed(2)} €</span></p>
-          <p className="text-gray-400 text-sm">TVA : <span className="text-white">{quote.total_tva?.toFixed(2)} €</span></p>
-          <p className="text-[#D4AF37] font-bold text-xl">TOTAL TTC : {quote.total_ttc?.toFixed(2)} €</p>
+          <p className="text-gray-400 text-base">Total HT : <span className="text-white">{quote.total_ht?.toFixed(2)} €</span></p>
+          <p className="text-gray-400 text-base">TVA : <span className="text-white">{quote.total_tva?.toFixed(2)} €</span></p>
+          <p className="text-[#D4AF37] font-bold text-2xl">TOTAL TTC : {quote.total_ttc?.toFixed(2)} €</p>
         </div>
 
         {/* Disclaimer estimatif */}
         <div className="flex items-start gap-2.5 bg-[#D4AF37]/5 border border-[#D4AF37]/15 rounded-sm p-3.5 mb-5">
           <AlertCircle size={13} className="text-[#D4AF37]/70 mt-0.5 flex-shrink-0"/>
-          <p className="text-[#D4AF37]/65 text-xs leading-relaxed" data-testid="quote-disclaimer">
+          <p className="text-[#D4AF37]/65 text-sm leading-relaxed" data-testid="quote-disclaimer">
             <span className="font-semibold text-[#D4AF37]/80">Estimation prévisionnelle.</span> Ce chiffrage est établi sur la base des informations communiquées et reste indicatif. Une visite technique gratuite de l'un de nos experts permettra de confirmer et finaliser ce devis. Tout ajustement éventuel sera soumis à votre accord avant tout engagement.
           </p>
         </div>
 
         {quote.notes && (
           <div className="bg-white/3 border border-white/5 p-4 mb-5 rounded-sm">
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Notes</p>
-            <p className="text-gray-300 text-sm">{quote.notes}</p>
+            <p className="text-sm text-gray-500 uppercase tracking-wider mb-1">Notes</p>
+            <p className="text-gray-300 text-base">{quote.notes}</p>
           </div>
         )}
 
@@ -428,19 +428,19 @@ function QuoteDetailView({ quote, onBack, onAccept, onRefuse, loading }) {
             <div className="flex flex-col sm:flex-row gap-3">
               <button onClick={() => onAccept(quote.id)} disabled={loading}
                 data-testid="accept-quote-btn"
-                className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3 hover:bg-green-500 transition-colors disabled:opacity-60 text-sm rounded-sm">
+                className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3 hover:bg-green-500 transition-colors disabled:opacity-60 text-base rounded-sm">
                 <CheckCircle size={16}/> {loading ? "..." : "Bon pour accord — Accepter"}
               </button>
               <button onClick={() => setRefuseMode(true)} disabled={loading}
                 data-testid="refuse-quote-btn"
-                className="flex-1 flex items-center justify-center gap-2 border border-red-500/30 text-red-400 font-bold py-3 hover:bg-red-500/10 transition-colors disabled:opacity-60 text-sm rounded-sm">
+                className="flex-1 flex items-center justify-center gap-2 border border-red-500/30 text-red-400 font-bold py-3 hover:bg-red-500/10 transition-colors disabled:opacity-60 text-base rounded-sm">
                 <XCircle size={16}/> Refuser
               </button>
             </div>
             {refuseMode && (
               <div className="mt-3">
                 <button onClick={() => onRefuse(quote.id)} disabled={loading}
-                  className="w-full bg-red-600 text-white font-bold py-2.5 text-sm hover:bg-red-500 transition-colors rounded-sm disabled:opacity-60">
+                  className="w-full bg-red-600 text-white font-bold py-2.5 text-base hover:bg-red-500 transition-colors rounded-sm disabled:opacity-60">
                   Confirmer le refus
                 </button>
               </div>
@@ -448,14 +448,14 @@ function QuoteDetailView({ quote, onBack, onAccept, onRefuse, loading }) {
           </div>
         )}
         {quote.status === "accepted" && (
-          <div className="border-t border-white/5 pt-4 flex items-center gap-2 text-green-400 text-sm font-semibold">
+          <div className="border-t border-white/5 pt-4 flex items-center gap-2 text-green-400 text-base font-semibold">
             <CheckCircle size={16}/> Vous avez accepté ce devis — Une facture a été générée.
           </div>
         )}
 
         <div className="mt-4 pt-4 border-t border-white/5">
           <a href={`${API}/quotes/${quote.id}/pdf`} target="_blank" rel="noreferrer"
-            className="flex items-center gap-2 text-gray-400 hover:text-[#D4AF37] text-xs transition-colors">
+            className="flex items-center gap-2 text-gray-400 hover:text-[#D4AF37] text-sm transition-colors">
             <Download size={13}/> Télécharger le devis PDF
           </a>
         </div>
@@ -478,7 +478,7 @@ function BankTransferPanel({ bankInfo, reference }) {
   if (!bankInfo.configured) {
     return (
       <div className="border-t border-white/5 px-4 py-3 bg-black/20">
-        <p className="text-gray-500 text-xs">Le paiement par virement n'est pas encore disponible pour cette facture.</p>
+        <p className="text-gray-500 text-sm">Le paiement par virement n'est pas encore disponible pour cette facture.</p>
       </div>
     );
   }
@@ -495,16 +495,16 @@ function BankTransferPanel({ bankInfo, reference }) {
       {rows.map(([label, value]) => (
         <div key={label} className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-gray-500 text-[11px] uppercase tracking-wider">{label}</p>
-            <p className="text-white text-sm font-mono">{value}</p>
+            <p className="text-gray-500 text-sm uppercase tracking-wider">{label}</p>
+            <p className="text-white text-base font-mono">{value}</p>
           </div>
           <button onClick={() => copy(label, value)}
-            className="flex items-center gap-1 text-gray-400 hover:text-[#D4AF37] text-xs transition-colors flex-shrink-0">
+            className="flex items-center gap-1 text-gray-400 hover:text-[#D4AF37] text-sm transition-colors flex-shrink-0">
             <Copy size={12}/> {copied === label ? "Copié" : "Copier"}
           </button>
         </div>
       ))}
-      <p className="text-gray-500 text-xs pt-2 border-t border-white/5">
+      <p className="text-gray-500 text-sm pt-2 border-t border-white/5">
         Merci d'indiquer la référence <span className="text-gray-300 font-medium">« {reference} »</span> lors
         de votre virement. Le paiement sera confirmé par notre équipe après réception, sous quelques jours ouvrés.
       </p>

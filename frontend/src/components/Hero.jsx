@@ -34,7 +34,7 @@ export default function Hero({ whatsapp }) {
           {/* Badge */}
           <div
             data-testid="hero-badge"
-            className="inline-flex items-center gap-2 bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-semibold uppercase tracking-widest px-4 py-2 mb-6 animate-fade-in"
+            className="inline-flex items-center gap-2 bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-sm font-semibold uppercase tracking-widest px-4 py-2 mb-6 animate-fade-in"
           >
             <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse" />
             Guadeloupe — Tous Travaux BTP
@@ -43,7 +43,7 @@ export default function Hero({ whatsapp }) {
           {/* Main Heading */}
           <h1
             data-testid="hero-title"
-            className="font-outfit font-bold text-4xl sm:text-5xl lg:text-6xl text-white leading-tight tracking-tight mb-6 animate-fade-in-up"
+            className="font-outfit font-bold text-5xl sm:text-6xl lg:text-7xl text-white leading-tight tracking-tight mb-6 animate-fade-in-up"
             style={{ animationDelay: "0.1s", opacity: 0 }}
           >
             Construisons
@@ -56,7 +56,7 @@ export default function Hero({ whatsapp }) {
           {/* Subtitle */}
           <p
             data-testid="hero-subtitle"
-            className="text-gray-300 text-base md:text-lg leading-relaxed mb-8 max-w-xl animate-fade-in-up"
+            className="text-gray-300 text-lg md:text-xl leading-relaxed mb-8 max-w-xl animate-fade-in-up"
             style={{ animationDelay: "0.2s", opacity: 0 }}
           >
             E3C, votre partenaire de confiance pour tous vos travaux de
@@ -76,7 +76,7 @@ export default function Hero({ whatsapp }) {
             ].map(({ icon: Icon, label }) => (
               <div
                 key={label}
-                className="flex items-center gap-2 text-gray-300 text-sm"
+                className="flex items-center gap-2 text-gray-300 text-base"
               >
                 <Icon size={14} className="text-[#D4AF37]" />
                 <span>{label}</span>
@@ -92,7 +92,7 @@ export default function Hero({ whatsapp }) {
             <button
               onClick={() => navigate("/devis")}
               data-testid="hero-devis-btn"
-              className="inline-flex items-center justify-center gap-3 bg-[#D4AF37] text-black font-bold text-base px-8 py-4 hover:bg-[#E6C65A] transition-all duration-200 hover:scale-105 active:scale-95 tracking-wide"
+              className="inline-flex items-center justify-center gap-3 bg-[#D4AF37] text-black font-bold text-lg px-8 py-4 hover:bg-[#E6C65A] transition-all duration-200 hover:scale-105 active:scale-95 tracking-wide"
             >
               <FileEdit size={18} />
               Demander un devis gratuit
@@ -102,7 +102,7 @@ export default function Hero({ whatsapp }) {
               target="_blank"
               rel="noopener noreferrer"
               data-testid="hero-whatsapp-btn"
-              className="inline-flex items-center justify-center gap-3 border border-white/20 text-white font-semibold text-base px-8 py-4 hover:border-[#D4AF37]/60 hover:text-[#D4AF37] transition-all duration-200 hover:scale-105 active:scale-95 tracking-wide backdrop-blur-sm"
+              className="inline-flex items-center justify-center gap-3 border border-white/20 text-white font-semibold text-lg px-8 py-4 hover:border-[#D4AF37]/60 hover:text-[#D4AF37] transition-all duration-200 hover:scale-105 active:scale-95 tracking-wide backdrop-blur-sm"
             >
               <WHATSAPP_SVG />
               WhatsApp
@@ -113,7 +113,7 @@ export default function Hero({ whatsapp }) {
 
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce">
-        <span className="text-xs text-gray-400 uppercase tracking-widest">
+        <span className="text-sm text-gray-400 uppercase tracking-widest">
           Découvrir
         </span>
         <ChevronDown size={16} className="text-[#D4AF37]" />

@@ -47,12 +47,12 @@ export default function Contact({ whatsapp }) {
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12">
         <div className="text-center mb-12">
-          <p className="text-[#D4AF37] text-xs font-bold uppercase tracking-widest mb-3">Contact</p>
-          <h2 className="font-outfit font-bold text-3xl md:text-4xl text-[#1A1A1A] dark:text-white mb-4">
+          <p className="text-[#D4AF37] text-sm font-bold uppercase tracking-widest mb-3">Contact</p>
+          <h2 className="font-outfit font-bold text-4xl md:text-5xl text-[#1A1A1A] dark:text-white mb-4">
             Contactez-nous
           </h2>
           <div className="section-divider mx-auto mb-4" />
-          <p className="text-[#737373] dark:text-gray-400 text-base max-w-lg mx-auto">
+          <p className="text-[#737373] dark:text-gray-400 text-lg max-w-lg mx-auto">
             Plusieurs moyens de nous joindre. Choisissez celui qui vous convient,
             devis gratuit et sans engagement.
           </p>
@@ -71,13 +71,13 @@ export default function Contact({ whatsapp }) {
                 <div className={`w-14 h-14 ${ch.iconBg} flex items-center justify-center rounded-full mb-4 ${ch.iconColor}`}>
                   <Icon />
                 </div>
-                <p className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-lg mb-1">{ch.label}</p>
-                <p className="text-[#737373] dark:text-gray-400 text-sm mb-5">{ch.value}</p>
+                <p className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-xl mb-1">{ch.label}</p>
+                <p className="text-[#737373] dark:text-gray-400 text-base mb-5">{ch.value}</p>
                 {ch.onClick ? (
                   <button
                     onClick={() => navigate("/contact")}
                     data-testid="contact-form-link"
-                    className={`inline-flex items-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-sm transition-colors ${ch.btnStyle}`}
+                    className={`inline-flex items-center gap-2 font-semibold text-base px-5 py-2.5 rounded-sm transition-colors ${ch.btnStyle}`}
                   >
                     {ch.cta} <ArrowRight size={14} />
                   </button>
@@ -86,7 +86,7 @@ export default function Contact({ whatsapp }) {
                     href={ch.href}
                     target={ch.external ? "_blank" : undefined}
                     rel={ch.external ? "noopener noreferrer" : undefined}
-                    className={`inline-flex items-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-sm transition-colors ${ch.btnStyle}`}
+                    className={`inline-flex items-center gap-2 font-semibold text-base px-5 py-2.5 rounded-sm transition-colors ${ch.btnStyle}`}
                   >
                     {ch.cta} <ArrowRight size={14} />
                   </a>
@@ -101,7 +101,7 @@ export default function Contact({ whatsapp }) {
           <button
             onClick={() => navigate("/contact")}
             data-testid="contact-page-cta"
-            className="inline-flex items-center gap-2 border border-[#D4AF37]/40 text-[#D4AF37] font-semibold px-8 py-3 hover:bg-[#D4AF37] hover:text-black transition-all duration-200 text-sm tracking-wide rounded-sm"
+            className="inline-flex items-center gap-2 border border-[#D4AF37]/40 text-[#D4AF37] font-semibold px-8 py-3 hover:bg-[#D4AF37] hover:text-black transition-all duration-200 text-base tracking-wide rounded-sm"
           >
             Voir la page contact complète <ArrowRight size={15} />
           </button>

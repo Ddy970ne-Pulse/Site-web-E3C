@@ -90,39 +90,39 @@ export default function InvoiceDetail({ invoice, onBack }) {
 
   return (
     <div data-testid="invoice-detail">
-      <button onClick={onBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm mb-5 transition-colors">
+      <button onClick={onBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-base mb-5 transition-colors">
         <ArrowLeft size={16}/> Retour aux factures
       </button>
       <div className="bg-[#121212] border border-white/5 rounded-sm p-6 mb-5">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="font-outfit font-bold text-white text-xl">{inv.invoice_number}</h2>
-            <p className="text-gray-400 text-sm">Devis ref : {inv.quote_number}</p>
+            <h2 className="font-outfit font-bold text-white text-2xl">{inv.invoice_number}</h2>
+            <p className="text-gray-400 text-base">Devis ref : {inv.quote_number}</p>
           </div>
           <a href={`${API}/invoices/${inv.id}/pdf`} target="_blank" rel="noreferrer"
-            className="flex items-center gap-2 border border-white/20 text-gray-300 px-4 py-2 text-xs hover:border-[#D4AF37]/40 hover:text-[#D4AF37] transition-colors">
+            className="flex items-center gap-2 border border-white/20 text-gray-300 px-4 py-2 text-sm hover:border-[#D4AF37]/40 hover:text-[#D4AF37] transition-colors">
             <FileText size={13}/> PDF
           </a>
         </div>
-        <div className="grid md:grid-cols-3 gap-4 text-sm">
-          <div><p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Client</p><p className="text-white font-medium">{inv.client_name}</p></div>
-          <div><p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Email</p><p className="text-gray-300">{inv.client_email}</p></div>
-          <div><p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Montant TTC</p><p className="text-[#D4AF37] font-bold text-lg">{inv.total_ttc?.toFixed(2)} €</p></div>
+        <div className="grid md:grid-cols-3 gap-4 text-base">
+          <div><p className="text-gray-500 text-sm uppercase tracking-wider mb-1">Client</p><p className="text-white font-medium">{inv.client_name}</p></div>
+          <div><p className="text-gray-500 text-sm uppercase tracking-wider mb-1">Email</p><p className="text-gray-300">{inv.client_email}</p></div>
+          <div><p className="text-gray-500 text-sm uppercase tracking-wider mb-1">Montant TTC</p><p className="text-[#D4AF37] font-bold text-xl">{inv.total_ttc?.toFixed(2)} €</p></div>
         </div>
       </div>
 
       {/* Tranches */}
       <div className="bg-[#121212] border border-white/5 rounded-sm p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-outfit font-bold text-white text-base">Calendrier de règlement</h3>
-          <button onClick={addTranche} className="flex items-center gap-1 text-[#D4AF37] text-xs font-semibold hover:underline">
+          <h3 className="font-outfit font-bold text-white text-lg">Calendrier de règlement</h3>
+          <button onClick={addTranche} className="flex items-center gap-1 text-[#D4AF37] text-sm font-semibold hover:underline">
             <Plus size={13}/> Ajouter une tranche
           </button>
         </div>
 
         {/* Preset templates */}
         <div className="mb-5 p-4 bg-white/2 border border-white/5 rounded-sm">
-          <p className="text-xs text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+          <p className="text-sm text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
             <Zap size={11} className="text-[#D4AF37]"/> Modèles d'acomptes
           </p>
           <div className="flex flex-wrap gap-2">
@@ -131,15 +131,15 @@ export default function InvoiceDetail({ invoice, onBack }) {
                 key={preset.id}
                 data-testid={`preset-${preset.id}`}
                 onClick={() => applyPreset(preset)}
-                className="px-3 py-1.5 text-xs font-semibold border border-white/10 text-gray-300 hover:border-[#D4AF37]/50 hover:text-[#D4AF37] transition-all rounded-sm">
+                className="px-3 py-1.5 text-sm font-semibold border border-white/10 text-gray-300 hover:border-[#D4AF37]/50 hover:text-[#D4AF37] transition-all rounded-sm">
                 {preset.label}
               </button>
             ))}
           </div>
         </div>
 
-        {msg && <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-3 mb-4 text-sm rounded-sm">{msg}</div>}
-        {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 mb-4 text-sm rounded-sm">{error}</div>}
+        {msg && <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-3 mb-4 text-base rounded-sm">{msg}</div>}
+        {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 mb-4 text-base rounded-sm">{error}</div>}
 
         <div className="space-y-3 mb-4">
           {tranches.map((t, i) => (
@@ -148,23 +148,23 @@ export default function InvoiceDetail({ invoice, onBack }) {
                 <input placeholder="Libellé (ex: Acompte 30%)" value={t.label}
                   onChange={e => setTranche(i, "label", e.target.value)}
                   disabled={t.status === "paid"}
-                  className="w-full bg-white/5 border border-white/10 text-white placeholder-gray-500 px-3 py-2 text-xs rounded-sm disabled:opacity-60" />
+                  className="w-full bg-white/5 border border-white/10 text-white placeholder-gray-500 px-3 py-2 text-sm rounded-sm disabled:opacity-60" />
               </div>
               <div className="col-span-5 md:col-span-3">
                 <input type="number" placeholder="Montant €" value={t.amount} min="0" step="0.01"
                   onChange={e => setTranche(i, "amount", e.target.value)}
                   disabled={t.status === "paid"}
-                  className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 text-xs rounded-sm disabled:opacity-60" />
+                  className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 text-sm rounded-sm disabled:opacity-60" />
               </div>
               <div className="col-span-5 md:col-span-3">
                 <input type="date" value={t.due_date}
                   onChange={e => setTranche(i, "due_date", e.target.value)}
                   disabled={t.status === "paid"}
-                  className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 text-xs rounded-sm disabled:opacity-60" />
+                  className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 text-sm rounded-sm disabled:opacity-60" />
               </div>
               <div className="col-span-12 md:col-span-2">
                 {t.status === "paid" ? (
-                  <span className="text-xs font-semibold px-2 py-1 rounded-sm text-green-400 bg-green-400/10">
+                  <span className="text-sm font-semibold px-2 py-1 rounded-sm text-green-400 bg-green-400/10">
                     Payé{t.payment_method ? ` · ${PAYMENT_METHOD_LABELS[t.payment_method] || t.payment_method}` : ""}
                   </span>
                 ) : (
@@ -172,7 +172,7 @@ export default function InvoiceDetail({ invoice, onBack }) {
                     defaultValue=""
                     data-testid={`mark-paid-${t.id}`}
                     onChange={e => markPaidManually(t.id, e.target.value)}
-                    className="w-full bg-yellow-400/10 text-yellow-400 text-xs font-semibold px-2 py-1.5 rounded-sm border-0">
+                    className="w-full bg-yellow-400/10 text-yellow-400 text-sm font-semibold px-2 py-1.5 rounded-sm border-0">
                     <option value="" disabled>En attente</option>
                     <option value="virement">Marquer payé — Virement</option>
                     <option value="especes">Marquer payé — Espèces</option>
@@ -193,13 +193,13 @@ export default function InvoiceDetail({ invoice, onBack }) {
 
         <div className="flex items-center justify-between border-t border-white/5 pt-4">
           <div>
-            <p className="text-sm text-gray-400">Total tranches : <span className={`font-bold ${diff < 0.01 ? "text-green-400" : "text-red-400"}`}>{totalTranches.toFixed(2)} €</span></p>
-            <p className="text-xs text-gray-500">Total facture : {inv.total_ttc?.toFixed(2)} €</p>
-            {diff >= 0.01 && <p className="text-red-400 text-xs mt-1">Différence : {diff.toFixed(2)} € — Le total doit correspondre au TTC</p>}
+            <p className="text-base text-gray-400">Total tranches : <span className={`font-bold ${diff < 0.01 ? "text-green-400" : "text-red-400"}`}>{totalTranches.toFixed(2)} €</span></p>
+            <p className="text-sm text-gray-500">Total facture : {inv.total_ttc?.toFixed(2)} €</p>
+            {diff >= 0.01 && <p className="text-red-400 text-sm mt-1">Différence : {diff.toFixed(2)} € — Le total doit correspondre au TTC</p>}
           </div>
           <button onClick={save} disabled={saving || diff >= 0.01}
             data-testid="save-tranches-btn"
-            className="flex items-center gap-2 bg-[#D4AF37] text-black font-bold px-6 py-3 hover:bg-[#E6C65A] transition-colors disabled:opacity-50 text-sm">
+            className="flex items-center gap-2 bg-[#D4AF37] text-black font-bold px-6 py-3 hover:bg-[#E6C65A] transition-colors disabled:opacity-50 text-base">
             <Save size={15}/> {saving ? "Sauvegarde..." : "Valider & Notifier le client"}
           </button>
         </div>

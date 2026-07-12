@@ -105,35 +105,35 @@ export default function SettingsPanel() {
 
   return (
     <div>
-      <h1 className="font-outfit font-bold text-2xl text-white mb-2">Paramètres</h1>
-      <p className="text-sm text-gray-500 mb-6">
+      <h1 className="font-outfit font-bold text-3xl text-white mb-2">Paramètres</h1>
+      <p className="text-base text-gray-500 mb-6">
         Configurez ici vos comptes de gestion (Stripe, Brevo, Google, Facebook, PayPal) — plus besoin de toucher au serveur.
       </p>
 
-      {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 mb-5 text-sm rounded-sm">{error}</div>}
-      {message && <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-3 mb-5 text-sm rounded-sm">{message}</div>}
+      {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 mb-5 text-base rounded-sm">{error}</div>}
+      {message && <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-3 mb-5 text-base rounded-sm">{message}</div>}
 
       {loading && !status ? (
-        <p className="text-sm text-gray-500">Chargement...</p>
+        <p className="text-base text-gray-500">Chargement...</p>
       ) : (
         <form onSubmit={save} className="space-y-6">
           {SECTIONS.map(section => (
             <div key={section.title} className="bg-[#121212] border border-white/5 rounded-sm p-5">
-              <h2 className="font-outfit font-semibold text-white text-sm mb-1">{section.title}</h2>
-              <p className="text-xs text-gray-500 mb-4">{section.help}</p>
+              <h2 className="font-outfit font-semibold text-white text-base mb-1">{section.title}</h2>
+              <p className="text-sm text-gray-500 mb-4">{section.help}</p>
               <div className="space-y-4">
                 {section.fields.map(field => {
                   const info = status?.[field.name];
                   return (
                     <div key={field.name}>
                       <div className="flex items-center gap-2 mb-1.5">
-                        <label className="text-xs text-gray-400 uppercase tracking-wider">{field.label}</label>
+                        <label className="text-sm text-gray-400 uppercase tracking-wider">{field.label}</label>
                         {info?.configured ? (
-                          <span className="flex items-center gap-1 text-[11px] text-green-400" title={info.source === "database" ? "Configuré depuis ce panneau" : "Configuré via variable d'environnement"}>
+                          <span className="flex items-center gap-1 text-sm text-green-400" title={info.source === "database" ? "Configuré depuis ce panneau" : "Configuré via variable d'environnement"}>
                             <CheckCircle2 size={12} /> {info.preview || "configuré"}
                           </span>
                         ) : (
-                          <span className="flex items-center gap-1 text-[11px] text-gray-600">
+                          <span className="flex items-center gap-1 text-sm text-gray-600">
                             <Circle size={12} /> non configuré
                           </span>
                         )}
@@ -145,7 +145,7 @@ export default function SettingsPanel() {
                         value={form[field.name] ?? ""}
                         onChange={e => handleChange(field.name, e.target.value)}
                         placeholder={info?.configured ? "Laisser vide pour ne pas changer" : field.placeholder}
-                        className="w-full bg-white/5 border border-white/10 text-white placeholder-gray-600 px-3 py-2.5 text-sm rounded-sm"
+                        className="w-full bg-white/5 border border-white/10 text-white placeholder-gray-600 px-3 py-2.5 text-base rounded-sm"
                       />
                     </div>
                   );
@@ -156,10 +156,10 @@ export default function SettingsPanel() {
 
           <div className="flex items-center gap-3">
             <button type="submit" disabled={saving} data-testid="settings-save"
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-[#D4AF37] text-black rounded-sm hover:bg-[#E6C65A] disabled:opacity-50">
+              className="flex items-center gap-2 px-4 py-2.5 text-base font-semibold bg-[#D4AF37] text-black rounded-sm hover:bg-[#E6C65A] disabled:opacity-50">
               <Save size={15} /> {saving ? "Enregistrement..." : "Enregistrer"}
             </button>
-            <span className="flex items-center gap-1.5 text-xs text-gray-500">
+            <span className="flex items-center gap-1.5 text-sm text-gray-500">
               <AlertCircle size={13} /> Seuls les champs remplis sont modifiés.
             </span>
           </div>

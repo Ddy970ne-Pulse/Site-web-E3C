@@ -66,13 +66,13 @@ export default function Navbar({ whatsapp }) {
           {/* Logo */}
           <Link to="/" data-testid="navbar-logo" className="flex items-center gap-2.5 group flex-shrink-0">
             <div className="w-10 h-10 bg-[#D4AF37] flex items-center justify-center rounded-sm shadow-lg">
-              <span className="font-outfit font-black text-black text-sm leading-none">E3C</span>
+              <span className="font-outfit font-black text-black text-base leading-none">E3C</span>
             </div>
             <div className="hidden sm:block">
-              <p className="font-outfit font-bold text-[#1A1A1A] dark:text-white text-sm leading-tight group-hover:text-[#D4AF37] transition-colors">
+              <p className="font-outfit font-bold text-[#1A1A1A] dark:text-white text-base leading-tight group-hover:text-[#D4AF37] transition-colors">
                 E3C — Entreprise de constructions
               </p>
-              <p className="text-[11px] text-gray-500 uppercase tracking-widest">Guadeloupe · BTP</p>
+              <p className="text-sm text-gray-500 uppercase tracking-widest">Guadeloupe · BTP</p>
             </div>
           </Link>
 
@@ -94,7 +94,7 @@ export default function Navbar({ whatsapp }) {
               <Link
                 to={user.role === "admin" ? "/admin" : "/espace-client"}
                 data-testid="navbar-user-link"
-                className="flex items-center gap-2 bg-[#D4AF37]/10 border border-[#D4AF37]/20 hover:bg-[#D4AF37]/20 text-[#D4AF37] px-3 py-1.5 rounded-sm transition-colors text-xs font-semibold"
+                className="flex items-center gap-2 bg-[#D4AF37]/10 border border-[#D4AF37]/20 hover:bg-[#D4AF37]/20 text-[#D4AF37] px-3 py-1.5 rounded-sm transition-colors text-sm font-semibold"
               >
                 <User size={14} />
                 <span className="hidden sm:inline max-w-[100px] truncate">{user.name.split(" ")[0]}</span>
@@ -106,16 +106,16 @@ export default function Navbar({ whatsapp }) {
                   to="/connexion"
                   data-testid="navbar-login-icon"
                   title="Se connecter"
-                  className="flex items-center gap-1.5 text-[#4B4B4B] hover:text-[#D4AF37] dark:text-gray-300 dark:hover:text-[#D4AF37] transition-colors p-2 rounded-sm hover:bg-black/5 dark:hover:bg-white/5 text-xs"
+                  className="flex items-center gap-1.5 text-[#4B4B4B] hover:text-[#D4AF37] dark:text-gray-300 dark:hover:text-[#D4AF37] transition-colors p-2 rounded-sm hover:bg-black/5 dark:hover:bg-white/5 text-sm"
                 >
                   <LogIn size={17} />
-                  <span className="hidden md:inline text-xs font-medium">Connexion</span>
+                  <span className="hidden md:inline text-sm font-medium">Connexion</span>
                 </Link>
                 <Link
                   to="/inscription"
                   data-testid="navbar-register-icon"
                   title="Créer un compte"
-                  className="flex items-center gap-1.5 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-[#4B4B4B] hover:text-[#1A1A1A] dark:text-gray-200 dark:hover:text-white transition-colors px-2.5 py-1.5 rounded-sm text-xs font-medium"
+                  className="flex items-center gap-1.5 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-[#4B4B4B] hover:text-[#1A1A1A] dark:text-gray-200 dark:hover:text-white transition-colors px-2.5 py-1.5 rounded-sm text-sm font-medium"
                 >
                   <UserPlus size={15} />
                   <span className="hidden md:inline">Compte</span>
@@ -153,9 +153,9 @@ export default function Navbar({ whatsapp }) {
         <div className="flex items-center justify-between px-6 h-16 md:h-20 border-b border-black/8 dark:border-white/5 flex-shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-[#D4AF37] flex items-center justify-center rounded-sm">
-              <span className="font-outfit font-black text-black text-xs">E3C</span>
+              <span className="font-outfit font-black text-black text-sm">E3C</span>
             </div>
-            <span className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-sm">Navigation</span>
+            <span className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-base">Navigation</span>
           </div>
           <button onClick={() => setOpen(false)} className="text-[#737373] hover:text-[#1A1A1A] dark:text-gray-400 dark:hover:text-white transition-colors p-1">
             <X size={22} />
@@ -176,7 +176,7 @@ export default function Navbar({ whatsapp }) {
                 }`}
               >
                 <Icon size={18} className={`flex-shrink-0 group-hover:scale-110 transition-transform text-[#D4AF37]`} />
-                <span className="font-medium text-base">{item.label}</span>
+                <span className="font-medium text-lg">{item.label}</span>
               </button>
             );
           })}
@@ -187,7 +187,7 @@ export default function Navbar({ whatsapp }) {
             className="w-full flex items-center gap-4 px-4 py-3.5 transition-colors rounded-sm text-left text-[#4B4B4B] hover:text-[#1A1A1A] hover:bg-black/5 dark:text-gray-300 dark:hover:text-white dark:hover:bg-white/5"
           >
             {isDark ? <Sun size={18} className="flex-shrink-0 text-[#D4AF37]" /> : <Moon size={18} className="flex-shrink-0 text-[#D4AF37]" />}
-            <span className="font-medium text-base">{isDark ? "Mode clair" : "Mode sombre"}</span>
+            <span className="font-medium text-lg">{isDark ? "Mode clair" : "Mode sombre"}</span>
           </button>
         </nav>
 
@@ -197,13 +197,13 @@ export default function Navbar({ whatsapp }) {
             target="_blank"
             rel="noopener noreferrer"
             data-testid="drawer-whatsapp-cta"
-            className="w-full flex items-center justify-center gap-2.5 bg-[#D4AF37] text-black font-bold py-3.5 hover:bg-[#E6C65A] transition-colors text-sm tracking-wide rounded-sm"
+            className="w-full flex items-center justify-center gap-2.5 bg-[#D4AF37] text-black font-bold py-3.5 hover:bg-[#E6C65A] transition-colors text-base tracking-wide rounded-sm"
             onClick={() => setOpen(false)}
           >
             <WHATSAPP_ICON />
             Devis Gratuit WhatsApp
           </a>
-          <p className="text-center text-xs text-[#9E9E9E] dark:text-gray-600">E3C — Entreprise de constructions · Guadeloupe (971)</p>
+          <p className="text-center text-sm text-[#9E9E9E] dark:text-gray-600">E3C — Entreprise de constructions · Guadeloupe (971)</p>
         </div>
       </div>
     </>

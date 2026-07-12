@@ -13,18 +13,18 @@ export default function CGV() {
       <Navbar whatsapp={WHATSAPP} />
 
       <main className="max-w-3xl mx-auto px-6 pt-32 pb-20">
-        <Link to="/" className="inline-flex items-center gap-2 text-[#737373] dark:text-gray-400 hover:text-[#D4AF37] text-sm mb-8 transition-colors">
+        <Link to="/" className="inline-flex items-center gap-2 text-[#737373] dark:text-gray-400 hover:text-[#D4AF37] text-base mb-8 transition-colors">
           <ChevronLeft size={14} /> Retour à l'accueil
         </Link>
 
-        <p className="text-[#D4AF37] text-xs font-bold uppercase tracking-widest mb-2">Conditions générales</p>
-        <h1 className="font-outfit font-bold text-3xl text-[#1A1A1A] dark:text-white mb-8">Conditions Générales de Vente</h1>
+        <p className="text-[#D4AF37] text-sm font-bold uppercase tracking-widest mb-2">Conditions générales</p>
+        <h1 className="font-outfit font-bold text-4xl text-[#1A1A1A] dark:text-white mb-8">Conditions Générales de Vente</h1>
         <div className="section-divider mb-10" />
 
-        <div className="space-y-10 text-[#737373] dark:text-gray-400 text-sm leading-relaxed">
+        <div className="space-y-10 text-[#737373] dark:text-gray-400 text-base leading-relaxed">
 
           <section>
-            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-base mb-3">1. Objet</h2>
+            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-lg mb-3">1. Objet</h2>
             <p>
               Les présentes Conditions Générales de Vente (CGV) régissent les relations contractuelles entre
               E3C — Entreprise de Constructions (ci-après « E3C ») et tout client faisant appel à ses services
@@ -33,7 +33,7 @@ export default function CGV() {
           </section>
 
           <section>
-            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-base mb-3">2. Devis et commandes</h2>
+            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-lg mb-3">2. Devis et commandes</h2>
             <p>
               Tout projet fait l'objet d'un devis gratuit, détaillé et personnalisé. Le devis est valable
               <strong className="text-[#1A1A1A] dark:text-gray-200"> 30 jours</strong> à compter de sa date d'émission.
@@ -45,7 +45,7 @@ export default function CGV() {
           </section>
 
           <section>
-            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-base mb-3">3. Prix et TVA</h2>
+            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-lg mb-3">3. Prix et TVA</h2>
             <p>
               Les prix sont exprimés en euros (€) hors taxes (HT). La TVA applicable en Guadeloupe est
               de <strong className="text-[#1A1A1A] dark:text-gray-200">8,5%</strong> (taux DOM). Le montant TTC est indiqué sur
@@ -58,7 +58,7 @@ export default function CGV() {
           </section>
 
           <section>
-            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-base mb-3">4. Modalités de paiement</h2>
+            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-lg mb-3">4. Modalités de paiement</h2>
             <div className="bg-white dark:bg-[#121212] border border-black/7 dark:border-white/5 rounded-sm p-5 space-y-2">
               <p><span className="text-[#D4AF37] font-semibold">Acompte :</span> <span className="text-[#1A1A1A] dark:text-gray-200">30% du montant TTC à la signature du devis</span></p>
               <p><span className="text-[#D4AF37] font-semibold">Situation :</span> <span className="text-[#1A1A1A] dark:text-gray-200">Selon avancement des travaux (sur facturation intermédiaire)</span></p>
@@ -72,7 +72,7 @@ export default function CGV() {
           </section>
 
           <section>
-            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-base mb-3">5. Délais d'exécution</h2>
+            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-lg mb-3">5. Délais d'exécution</h2>
             <p>
               Les délais d'exécution sont indiqués à titre prévisionnel dans le devis. E3C s'engage à respecter
               ces délais, sous réserve de cas de force majeure (intempéries, retard de livraison de matériaux,
@@ -85,7 +85,7 @@ export default function CGV() {
           </section>
 
           <section>
-            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-base mb-3">6. Réception des travaux</h2>
+            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-lg mb-3">6. Réception des travaux</h2>
             <p>
               La réception des travaux est prononcée contradictoirement entre E3C et le client à l'achèvement
               des travaux. Un procès-verbal de réception est établi. Les réserves éventuelles doivent être
@@ -94,25 +94,25 @@ export default function CGV() {
           </section>
 
           <section>
-            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-base mb-3">7. Garanties légales</h2>
+            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-lg mb-3">7. Garanties légales</h2>
             <div className="space-y-3">
               <div className="bg-white dark:bg-[#121212] border border-black/7 dark:border-white/5 rounded-sm p-4">
-                <p className="text-[#1A1A1A] dark:text-gray-200 font-semibold text-sm uppercase tracking-wider mb-1">Garantie décennale (10 ans)</p>
-                <p className="text-sm">Couvre les dommages qui compromettent la solidité de l'ouvrage ou le rendent impropre à sa destination (art. 1792 du Code civil).</p>
+                <p className="text-[#1A1A1A] dark:text-gray-200 font-semibold text-base uppercase tracking-wider mb-1">Garantie décennale (10 ans)</p>
+                <p className="text-base">Couvre les dommages qui compromettent la solidité de l'ouvrage ou le rendent impropre à sa destination (art. 1792 du Code civil).</p>
               </div>
               <div className="bg-white dark:bg-[#121212] border border-black/7 dark:border-white/5 rounded-sm p-4">
-                <p className="text-[#1A1A1A] dark:text-gray-200 font-semibold text-sm uppercase tracking-wider mb-1">Garantie de parfait achèvement (1 an)</p>
-                <p className="text-sm">Couvre tous les désordres signalés lors de la réception ou apparaissant dans l'année suivante.</p>
+                <p className="text-[#1A1A1A] dark:text-gray-200 font-semibold text-base uppercase tracking-wider mb-1">Garantie de parfait achèvement (1 an)</p>
+                <p className="text-base">Couvre tous les désordres signalés lors de la réception ou apparaissant dans l'année suivante.</p>
               </div>
               <div className="bg-white dark:bg-[#121212] border border-black/7 dark:border-white/5 rounded-sm p-4">
-                <p className="text-[#1A1A1A] dark:text-gray-200 font-semibold text-sm uppercase tracking-wider mb-1">Garantie biennale (2 ans)</p>
-                <p className="text-sm">Couvre les éléments d'équipement dissociables de l'ouvrage.</p>
+                <p className="text-[#1A1A1A] dark:text-gray-200 font-semibold text-base uppercase tracking-wider mb-1">Garantie biennale (2 ans)</p>
+                <p className="text-base">Couvre les éléments d'équipement dissociables de l'ouvrage.</p>
               </div>
             </div>
           </section>
 
           <section>
-            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-base mb-3">8. Litiges</h2>
+            <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-lg mb-3">8. Litiges</h2>
             <p>
               En cas de litige, les parties s'engagent à rechercher une solution amiable avant tout recours
               judiciaire. À défaut d'accord amiable, le tribunal compétent sera celui du ressort du siège
@@ -123,7 +123,7 @@ export default function CGV() {
             </p>
           </section>
 
-          <p className="text-xs text-[#ADADAD] dark:text-gray-600 border-t border-black/7 dark:border-white/5 pt-6">
+          <p className="text-sm text-[#ADADAD] dark:text-gray-600 border-t border-black/7 dark:border-white/5 pt-6">
             Dernière mise à jour : Avril 2026
           </p>
         </div>

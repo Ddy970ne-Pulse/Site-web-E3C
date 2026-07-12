@@ -31,16 +31,16 @@ export default function ZoneIntervention({ whatsapp }) {
         <div className="grid md:grid-cols-2 gap-12 md:gap-20 items-center">
           {/* Left */}
           <div>
-            <p className="text-[#D4AF37] text-xs font-bold uppercase tracking-widest mb-3">
+            <p className="text-[#D4AF37] text-sm font-bold uppercase tracking-widest mb-3">
               Zone d'intervention
             </p>
-            <h2 className="font-outfit font-bold text-3xl md:text-4xl text-[#1A1A1A] dark:text-white mb-4">
+            <h2 className="font-outfit font-bold text-4xl md:text-5xl text-[#1A1A1A] dark:text-white mb-4">
               Nous intervenons sur
               <br />
               toute la Guadeloupe
             </h2>
             <div className="section-divider mb-6" />
-            <p className="text-[#737373] dark:text-gray-400 text-base leading-relaxed mb-8">
+            <p className="text-[#737373] dark:text-gray-400 text-lg leading-relaxed mb-8">
               Que vous soyez en Grande-Terre, Basse-Terre ou dans les communes
               environnantes, notre équipe E3C se déplace rapidement pour étudier
               votre projet et réaliser vos travaux.
@@ -60,8 +60,8 @@ export default function ZoneIntervention({ whatsapp }) {
                       <Icon size={16} strokeWidth={1.5} className="text-[#D4AF37]" />
                     </div>
                     <div>
-                      <p className="text-xs text-[#9E9E9E] dark:text-gray-500 uppercase tracking-wider">{item.title}</p>
-                      <p className="text-[#1A1A1A] dark:text-white font-medium text-sm">{item.value}</p>
+                      <p className="text-sm text-[#9E9E9E] dark:text-gray-500 uppercase tracking-wider">{item.title}</p>
+                      <p className="text-[#1A1A1A] dark:text-white font-medium text-base">{item.value}</p>
                     </div>
                   </div>
                 );
@@ -72,7 +72,7 @@ export default function ZoneIntervention({ whatsapp }) {
               <button
                 onClick={() => navigate("/devis")}
                 data-testid="zone-devis-btn"
-                className="inline-flex items-center justify-center gap-2 bg-[#D4AF37] text-black font-bold px-6 py-3 hover:bg-[#E6C65A] transition-colors text-sm tracking-wide rounded-sm"
+                className="inline-flex items-center justify-center gap-2 bg-[#D4AF37] text-black font-bold px-6 py-3 hover:bg-[#E6C65A] transition-colors text-base tracking-wide rounded-sm"
               >
                 Demander un devis <ArrowRight size={14} />
               </button>
@@ -81,7 +81,7 @@ export default function ZoneIntervention({ whatsapp }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="zone-whatsapp-btn"
-                className="inline-flex items-center justify-center gap-2 border border-black/15 dark:border-white/20 text-[#1A1A1A] dark:text-white font-semibold px-6 py-3 hover:border-[#D4AF37]/50 hover:text-[#D4AF37] transition-colors text-sm rounded-sm"
+                className="inline-flex items-center justify-center gap-2 border border-black/15 dark:border-white/20 text-[#1A1A1A] dark:text-white font-semibold px-6 py-3 hover:border-[#D4AF37]/50 hover:text-[#D4AF37] transition-colors text-base rounded-sm"
               >
                 WhatsApp
               </a>
@@ -90,7 +90,7 @@ export default function ZoneIntervention({ whatsapp }) {
 
           {/* Right — Communes */}
           <div>
-            <p className="text-xs text-[#9E9E9E] dark:text-gray-500 uppercase tracking-widest mb-5 font-semibold">
+            <p className="text-sm text-[#9E9E9E] dark:text-gray-500 uppercase tracking-widest mb-5 font-semibold">
               Communes desservies
             </p>
             <div className="flex flex-wrap gap-2">
@@ -98,16 +98,16 @@ export default function ZoneIntervention({ whatsapp }) {
                 <span
                   key={commune}
                   data-testid={`commune-tag-${commune}`}
-                  className="zone-tag text-xs font-semibold px-3 py-1.5 rounded-sm"
+                  className="zone-tag text-sm font-semibold px-3 py-1.5 rounded-sm"
                 >
                   {commune}
                 </span>
               ))}
-              <span className="zone-tag text-xs font-semibold px-3 py-1.5 rounded-sm opacity-70">
+              <span className="zone-tag text-sm font-semibold px-3 py-1.5 rounded-sm opacity-70">
                 + toutes communes
               </span>
             </div>
-            <p className="text-xs text-[#9E9E9E] dark:text-gray-500 mt-4">
+            <p className="text-sm text-[#9E9E9E] dark:text-gray-500 mt-4">
               * Un doute ? Appelez-nous, on vous confirme notre
               disponibilit&eacute;.
             </p>
@@ -125,7 +125,7 @@ export default function ZoneIntervention({ whatsapp }) {
               {/* Badge overlay */}
               <div className="absolute top-3 left-3 bg-[#FAFAF8]/90 dark:bg-[#0A0A0A]/90 backdrop-blur-sm border border-[#D4AF37]/30 px-3 py-1.5 rounded-sm flex items-center gap-2 pointer-events-none">
                 <MapPin size={12} className="text-[#D4AF37]" />
-                <span className="text-[#1A1A1A] dark:text-white text-xs font-semibold">Guadeloupe (971)</span>
+                <span className="text-[#1A1A1A] dark:text-white text-sm font-semibold">Guadeloupe (971)</span>
               </div>
             </div>
           </div>

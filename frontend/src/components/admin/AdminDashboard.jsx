@@ -24,17 +24,17 @@ const STATUS_LABELS = {
 
 function StatusBadge({ status }) {
   const s = STATUS_LABELS[status] || { label: status, color: "text-gray-400 bg-gray-400/10" };
-  return <span className={`text-xs font-semibold px-2 py-1 rounded-sm uppercase tracking-wide ${s.color}`}>{s.label}</span>;
+  return <span className={`text-sm font-semibold px-2 py-1 rounded-sm uppercase tracking-wide ${s.color}`}>{s.label}</span>;
 }
 
 function StatCard({ icon: Icon, label, value, color = "text-[#D4AF37]" }) {
   return (
     <div className="bg-[#121212] border border-white/5 p-6 rounded-sm">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-gray-500 uppercase tracking-widest">{label}</span>
+        <span className="text-sm text-gray-500 uppercase tracking-widest">{label}</span>
         <Icon size={18} className={color} />
       </div>
-      <p className={`font-outfit font-bold text-3xl ${color}`}>{value}</p>
+      <p className={`font-outfit font-bold text-4xl ${color}`}>{value}</p>
     </div>
   );
 }
@@ -93,62 +93,62 @@ function PricingTab({ items, onRefresh }) {
 
   return (
     <div>
-      <h1 className="font-outfit font-bold text-2xl text-white mb-2">Grille tarifaire</h1>
-      <p className="text-gray-500 text-sm mb-6">Les articles actifs sont utilisés par les clients pour construire leur devis estimatif.</p>
+      <h1 className="font-outfit font-bold text-3xl text-white mb-2">Grille tarifaire</h1>
+      <p className="text-gray-500 text-base mb-6">Les articles actifs sont utilisés par les clients pour construire leur devis estimatif.</p>
 
       {/* Formulaire ajout / édition */}
       <div className="bg-[#121212] border border-[#D4AF37]/20 rounded-sm p-6 mb-8">
-        <h3 className="font-outfit font-semibold text-white text-sm mb-4 flex items-center gap-2">
+        <h3 className="font-outfit font-semibold text-white text-base mb-4 flex items-center gap-2">
           <Receipt size={14} className="text-[#D4AF37]" />
           {editId ? "Modifier l'article" : "Ajouter un article"}
         </h3>
         <form onSubmit={save} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Catégorie *</label>
+              <label className="text-sm text-gray-500 uppercase tracking-widest mb-1.5 block">Catégorie *</label>
               <select value={form.category} onChange={e => set("category", e.target.value)}
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-category">
+                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-base px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-category">
                 {PRICING_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div className="lg:col-span-2">
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Description *</label>
+              <label className="text-sm text-gray-500 uppercase tracking-widest mb-1.5 block">Description *</label>
               <input value={form.description} onChange={e => set("description", e.target.value)}
                 placeholder="Ex : Mur en agglos 15cm, Peinture façade acrylique…"
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-description" />
+                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-base px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-description" />
             </div>
             <div>
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Unité *</label>
+              <label className="text-sm text-gray-500 uppercase tracking-widest mb-1.5 block">Unité *</label>
               <select value={form.unit} onChange={e => set("unit", e.target.value)}
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-unit">
+                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-base px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-unit">
                 {PRICING_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Prix HT (€) *</label>
+              <label className="text-sm text-gray-500 uppercase tracking-widest mb-1.5 block">Prix HT (€) *</label>
               <input type="number" min="0" step="0.01" value={form.unit_price_ht} onChange={e => set("unit_price_ht", e.target.value)}
                 placeholder="0.00"
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-price" />
+                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-base px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-price" />
             </div>
             <div>
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">TVA (%)</label>
+              <label className="text-sm text-gray-500 uppercase tracking-widest mb-1.5 block">TVA (%)</label>
               <input type="number" min="0" max="100" step="0.5" value={form.tva_rate} onChange={e => set("tva_rate", parseFloat(e.target.value))}
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" />
+                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-base px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" />
             </div>
           </div>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="active-chk" checked={form.active} onChange={e => set("active", e.target.checked)} className="accent-[#D4AF37]" />
-            <label htmlFor="active-chk" className="text-gray-300 text-sm">Actif (visible dans le wizard devis)</label>
+            <label htmlFor="active-chk" className="text-gray-300 text-base">Actif (visible dans le wizard devis)</label>
           </div>
-          {error && <p className="text-red-400 text-xs">{error}</p>}
+          {error && <p className="text-red-400 text-sm">{error}</p>}
           <div className="flex gap-3">
             <button type="submit" disabled={loading} data-testid="pricing-save-btn"
-              className="flex items-center gap-2 bg-[#D4AF37] text-black font-bold text-sm px-6 py-2.5 hover:bg-[#E6C65A] rounded-sm disabled:opacity-60 transition-colors">
+              className="flex items-center gap-2 bg-[#D4AF37] text-black font-bold text-base px-6 py-2.5 hover:bg-[#E6C65A] rounded-sm disabled:opacity-60 transition-colors">
               {loading ? "Enregistrement…" : editId ? "Mettre à jour" : "Ajouter à la grille"}
             </button>
             {editId && (
               <button type="button" onClick={() => { setForm(EMPTY); setEditId(null); }}
-                className="text-gray-400 hover:text-white text-sm px-4 py-2.5 border border-white/10 rounded-sm transition-colors">
+                className="text-gray-400 hover:text-white text-base px-4 py-2.5 border border-white/10 rounded-sm transition-colors">
                 Annuler
               </button>
             )}
@@ -160,24 +160,24 @@ function PricingTab({ items, onRefresh }) {
       <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
         {["Tout", ...groupedCats].map(c => (
           <button key={c} onClick={() => setFilterCat(c)}
-            className={`flex-shrink-0 px-3 py-1 text-xs font-semibold rounded-sm border transition-all ${filterCat === c ? "bg-[#D4AF37] border-[#D4AF37] text-black" : "border-white/10 text-gray-400 hover:border-white/20"}`}>
+            className={`flex-shrink-0 px-3 py-1 text-sm font-semibold rounded-sm border transition-all ${filterCat === c ? "bg-[#D4AF37] border-[#D4AF37] text-black" : "border-white/10 text-gray-400 hover:border-white/20"}`}>
             {c}
           </button>
         ))}
-        <span className="text-gray-600 text-xs ml-2 flex-shrink-0">{filtered.length} article{filtered.length > 1 ? "s" : ""}</span>
+        <span className="text-gray-600 text-sm ml-2 flex-shrink-0">{filtered.length} article{filtered.length > 1 ? "s" : ""}</span>
       </div>
 
       {/* Table */}
       <div className="bg-[#121212] border border-white/5 rounded-sm overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full text-base">
           <thead>
             <tr className="border-b border-white/5">
-              <th className="text-left text-xs text-gray-500 uppercase tracking-wider px-4 py-3">Description</th>
-              <th className="text-left text-xs text-gray-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Catégorie</th>
-              <th className="text-right text-xs text-gray-500 uppercase tracking-wider px-4 py-3">Prix HT</th>
-              <th className="text-center text-xs text-gray-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Unité</th>
-              <th className="text-center text-xs text-gray-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">TVA</th>
-              <th className="text-center text-xs text-gray-500 uppercase tracking-wider px-4 py-3">Statut</th>
+              <th className="text-left text-sm text-gray-500 uppercase tracking-wider px-4 py-3">Description</th>
+              <th className="text-left text-sm text-gray-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Catégorie</th>
+              <th className="text-right text-sm text-gray-500 uppercase tracking-wider px-4 py-3">Prix HT</th>
+              <th className="text-center text-sm text-gray-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Unité</th>
+              <th className="text-center text-sm text-gray-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">TVA</th>
+              <th className="text-center text-sm text-gray-500 uppercase tracking-wider px-4 py-3">Statut</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -188,35 +188,35 @@ function PricingTab({ items, onRefresh }) {
                   <p className="text-white font-medium">{item.description}</p>
                 </td>
                 <td className="px-4 py-3 hidden md:table-cell">
-                  <span className="text-xs text-[#D4AF37]/80 bg-[#D4AF37]/8 px-2 py-0.5 rounded-sm">{item.category}</span>
+                  <span className="text-sm text-[#D4AF37]/80 bg-[#D4AF37]/8 px-2 py-0.5 rounded-sm">{item.category}</span>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span className="text-white font-semibold">{item.unit_price_ht.toFixed(2)} €</span>
                 </td>
                 <td className="px-4 py-3 text-center hidden sm:table-cell">
-                  <span className="text-gray-400 text-xs">{item.unit}</span>
+                  <span className="text-gray-400 text-sm">{item.unit}</span>
                 </td>
                 <td className="px-4 py-3 text-center hidden sm:table-cell">
-                  <span className="text-gray-400 text-xs">{item.tva_rate}%</span>
+                  <span className="text-gray-400 text-sm">{item.tva_rate}%</span>
                 </td>
                 <td className="px-4 py-3 text-center">
                   <button onClick={() => toggleActive(item)}
-                    className={`text-xs px-2 py-1 rounded-sm border transition-colors ${item.active ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-gray-500/10 text-gray-500 border-gray-500/20"}`}>
+                    className={`text-sm px-2 py-1 rounded-sm border transition-colors ${item.active ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-gray-500/10 text-gray-500 border-gray-500/20"}`}>
                     {item.active ? "Actif" : "Inactif"}
                   </button>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2 justify-end">
                     <button onClick={() => startEdit(item)} data-testid={`edit-pricing-${item.id}`}
-                      className="text-xs text-[#D4AF37] hover:underline">Modifier</button>
+                      className="text-sm text-[#D4AF37] hover:underline">Modifier</button>
                     <button onClick={() => deleteItem(item.id)} data-testid={`delete-pricing-${item.id}`}
-                      className="text-xs text-red-400 hover:underline">Supprimer</button>
+                      className="text-sm text-red-400 hover:underline">Supprimer</button>
                   </div>
                 </td>
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-500 text-sm">
+              <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-500 text-base">
                 Aucun article. Ajoutez vos premières prestations ci-dessus.
               </td></tr>
             )}
@@ -273,38 +273,38 @@ function GalleryTab({ images, onRefresh }) {
 
   return (
     <div>
-      <h1 className="font-outfit font-bold text-2xl text-white mb-6">Galerie ({images.length} photos admin)</h1>
+      <h1 className="font-outfit font-bold text-3xl text-white mb-6">Galerie ({images.length} photos admin)</h1>
 
       {/* Upload form */}
       <div className="bg-[#121212] border border-white/5 rounded-sm p-6 mb-8">
-        <h3 className="font-outfit font-semibold text-white text-sm mb-4 flex items-center gap-2"><Upload size={14} className="text-[#D4AF37]" /> Ajouter une photo</h3>
+        <h3 className="font-outfit font-semibold text-white text-base mb-4 flex items-center gap-2"><Upload size={14} className="text-[#D4AF37]" /> Ajouter une photo</h3>
         <form onSubmit={upload} className="space-y-4">
           {/* Drop zone */}
           <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 hover:border-[#D4AF37]/30 rounded-sm p-8 cursor-pointer transition-colors group">
             {preview
               ? <img src={preview} alt="preview" className="max-h-40 object-contain mb-3 rounded-sm" />
-              : <><Upload size={28} className="text-gray-600 group-hover:text-[#D4AF37]/60 mb-2 transition-colors" /><p className="text-gray-500 text-sm">Cliquer pour choisir une photo (JPEG, PNG, WEBP · max 10 Mo)</p></>
+              : <><Upload size={28} className="text-gray-600 group-hover:text-[#D4AF37]/60 mb-2 transition-colors" /><p className="text-gray-500 text-base">Cliquer pour choisir une photo (JPEG, PNG, WEBP · max 10 Mo)</p></>
             }
             <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} className="hidden" data-testid="gallery-file-input" />
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Libellé *</label>
+              <label className="text-sm text-gray-500 uppercase tracking-widest mb-1.5 block">Libellé *</label>
               <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Résidence Martin, Rénovation cuisine…"
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-4 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="gallery-label-input" />
+                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-base px-4 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="gallery-label-input" />
             </div>
             <div>
-              <label className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Catégorie *</label>
+              <label className="text-sm text-gray-500 uppercase tracking-widest mb-1.5 block">Catégorie *</label>
               <select value={category} onChange={e => setCategory(e.target.value)}
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-sm px-4 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="gallery-category-select">
+                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-base px-4 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="gallery-category-select">
                 {GALLERY_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           </div>
-          {error && <p className="text-red-400 text-xs">{error}</p>}
-          {success && <p className="text-green-400 text-xs">{success}</p>}
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {success && <p className="text-green-400 text-sm">{success}</p>}
           <button type="submit" disabled={loading} data-testid="gallery-upload-btn"
-            className="flex items-center gap-2 bg-[#D4AF37] text-black font-bold text-sm px-6 py-2.5 hover:bg-[#E6C65A] transition-colors rounded-sm disabled:opacity-60">
+            className="flex items-center gap-2 bg-[#D4AF37] text-black font-bold text-base px-6 py-2.5 hover:bg-[#E6C65A] transition-colors rounded-sm disabled:opacity-60">
             {loading ? "Upload…" : <><Upload size={14}/> Publier dans la galerie</>}
           </button>
         </form>
@@ -320,15 +320,15 @@ function GalleryTab({ images, onRefresh }) {
                 <Trash2 size={13} className="text-white" />
               </button>
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-widest text-[#D4AF37]">{img.category}</span>
-                <p className="text-white text-xs font-medium leading-snug">{img.label}</p>
+                <span className="text-sm font-bold uppercase tracking-widest text-[#D4AF37]">{img.category}</span>
+                <p className="text-white text-sm font-medium leading-snug">{img.label}</p>
               </div>
             </div>
           </div>
         ))}
         {images.length === 0 && (
           <div className="col-span-4 py-12 text-center border border-dashed border-white/10 rounded-sm">
-            <p className="text-gray-500 text-sm">Aucune photo uploadée. Les photos statiques sont toujours visibles dans la galerie publique.</p>
+            <p className="text-gray-500 text-base">Aucune photo uploadée. Les photos statiques sont toujours visibles dans la galerie publique.</p>
           </div>
         )}
       </div>
@@ -348,11 +348,11 @@ function TestimonialsTab({ testimonials, onRefresh }) {
 
   return (
     <div>
-      <h1 className="font-outfit font-bold text-2xl text-white mb-2">Témoignages</h1>
+      <h1 className="font-outfit font-bold text-3xl text-white mb-2">Témoignages</h1>
       <div className="flex gap-4 mb-6">
-        <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-sm">{pending.length} en attente</span>
-        <span className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded-sm">{approved.length} publiés</span>
-        <span className="text-xs text-gray-400 bg-gray-400/10 px-2 py-1 rounded-sm">{rejected.length} rejetés</span>
+        <span className="text-sm text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-sm">{pending.length} en attente</span>
+        <span className="text-sm text-green-400 bg-green-400/10 px-2 py-1 rounded-sm">{approved.length} publiés</span>
+        <span className="text-sm text-gray-400 bg-gray-400/10 px-2 py-1 rounded-sm">{rejected.length} rejetés</span>
       </div>
       <div className="space-y-3">
         {testimonials.map(t => (
@@ -360,27 +360,27 @@ function TestimonialsTab({ testimonials, onRefresh }) {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-1">
-                  <p className="text-white font-semibold text-sm">{t.name}</p>
-                  {t.commune && <span className="text-xs text-gray-500">{t.commune}</span>}
-                  {t.service && <span className="text-xs text-[#D4AF37]/70">{t.service}</span>}
+                  <p className="text-white font-semibold text-base">{t.name}</p>
+                  {t.commune && <span className="text-sm text-gray-500">{t.commune}</span>}
+                  {t.service && <span className="text-sm text-[#D4AF37]/70">{t.service}</span>}
                   <div className="flex gap-0.5 ml-1">
-                    {Array.from({length:5}).map((_,i) => <span key={i} className={`text-[10px] ${i < t.stars ? "text-[#D4AF37]" : "text-gray-700"}`}>★</span>)}
+                    {Array.from({length:5}).map((_,i) => <span key={i} className={`text-sm ${i < t.stars ? "text-[#D4AF37]" : "text-gray-700"}`}>★</span>)}
                   </div>
                 </div>
-                {t.email && <p className="text-gray-600 text-xs mb-2">{t.email}</p>}
-                <p className="text-gray-300 text-sm leading-relaxed">"{t.text}"</p>
-                <p className="text-gray-600 text-xs mt-2">{new Date(t.created_at).toLocaleDateString("fr-FR")}</p>
+                {t.email && <p className="text-gray-600 text-sm mb-2">{t.email}</p>}
+                <p className="text-gray-300 text-base leading-relaxed">"{t.text}"</p>
+                <p className="text-gray-600 text-sm mt-2">{new Date(t.created_at).toLocaleDateString("fr-FR")}</p>
               </div>
               <div className="flex gap-2 flex-shrink-0">
                 {t.status !== "approved" && (
                   <button onClick={() => updateStatus(t.id, "approved")} data-testid={`approve-${t.id}`}
-                    className="flex items-center gap-1 text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/20 px-3 py-1.5 rounded-sm transition-colors">
+                    className="flex items-center gap-1 text-sm bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/20 px-3 py-1.5 rounded-sm transition-colors">
                     <CheckCircle size={12}/> Publier
                   </button>
                 )}
                 {t.status !== "rejected" && (
                   <button onClick={() => updateStatus(t.id, "rejected")} data-testid={`reject-${t.id}`}
-                    className="flex items-center gap-1 text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/15 px-3 py-1.5 rounded-sm transition-colors">
+                    className="flex items-center gap-1 text-sm bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/15 px-3 py-1.5 rounded-sm transition-colors">
                     <XCircle size={12}/> Rejeter
                   </button>
                 )}
@@ -390,7 +390,7 @@ function TestimonialsTab({ testimonials, onRefresh }) {
         ))}
         {testimonials.length === 0 && (
           <div className="bg-[#121212] border border-white/5 rounded-sm p-12 text-center">
-            <p className="text-gray-500 text-sm">Aucun témoignage reçu pour le moment.</p>
+            <p className="text-gray-500 text-base">Aucun témoignage reçu pour le moment.</p>
           </div>
         )}
       </div>
@@ -487,11 +487,11 @@ export default function AdminDashboard() {
         <div className="p-5 border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-[#D4AF37] flex items-center justify-center">
-              <span className="font-outfit font-black text-black text-xs">E3C</span>
+              <span className="font-outfit font-black text-black text-sm">E3C</span>
             </div>
             <div>
-              <p className="font-outfit font-bold text-white text-sm">Administration</p>
-              <p className="text-xs text-gray-500">{user?.email}</p>
+              <p className="font-outfit font-bold text-white text-base">Administration</p>
+              <p className="text-sm text-gray-500">{user?.email}</p>
             </div>
           </div>
         </div>
@@ -500,14 +500,14 @@ export default function AdminDashboard() {
             const Icon = t.icon;
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-sm transition-colors ${tab === t.id ? "bg-[#D4AF37]/10 text-[#D4AF37] font-semibold" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-base rounded-sm transition-colors ${tab === t.id ? "bg-[#D4AF37]/10 text-[#D4AF37] font-semibold" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>
                 <Icon size={16} /> {t.label}
               </button>
             );
           })}
         </nav>
         <div className="p-3 border-t border-white/5">
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-400 hover:text-red-400 transition-colors rounded-sm">
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 text-base text-gray-400 hover:text-red-400 transition-colors rounded-sm">
             <LogOut size={16} /> Déconnexion
           </button>
         </div>
@@ -524,7 +524,7 @@ export default function AdminDashboard() {
         <div className="md:hidden flex gap-2 overflow-x-auto pb-4 mb-4">
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={`flex-shrink-0 px-3 py-1.5 text-xs font-semibold rounded-sm transition-colors ${tab === t.id ? "bg-[#D4AF37] text-black" : "bg-[#121212] text-gray-400 border border-white/5"}`}>
+              className={`flex-shrink-0 px-3 py-1.5 text-sm font-semibold rounded-sm transition-colors ${tab === t.id ? "bg-[#D4AF37] text-black" : "bg-[#121212] text-gray-400 border border-white/5"}`}>
               {t.label}
             </button>
           ))}
@@ -533,7 +533,7 @@ export default function AdminDashboard() {
         {/* Dashboard Tab */}
         {tab === "dashboard" && (
           <div>
-            <h1 className="font-outfit font-bold text-2xl text-white mb-6">Tableau de bord</h1>
+            <h1 className="font-outfit font-bold text-3xl text-white mb-6">Tableau de bord</h1>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               <StatCard icon={FileText} label="Devis total" value={quotes.length} />
               <StatCard icon={CheckCircle} label="Acceptés" value={quotes.filter(q => q.status === "accepted").length} color="text-green-400" />
@@ -544,43 +544,43 @@ export default function AdminDashboard() {
               <div className="bg-[#121212] border border-white/5 rounded-sm p-5">
                 <h3 className="font-outfit font-semibold text-white mb-4 flex items-center justify-between">
                   Devis récents
-                  <button onClick={() => setTab("quotes")} className="text-xs text-[#D4AF37] hover:underline">Voir tout</button>
+                  <button onClick={() => setTab("quotes")} className="text-sm text-[#D4AF37] hover:underline">Voir tout</button>
                 </h3>
                 <div className="space-y-3">
                   {quotes.slice(0, 5).map(q => (
                     <div key={q.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                       <div>
-                        <p className="text-white text-sm font-medium">{q.quote_number}</p>
-                        <p className="text-gray-400 text-xs">{q.client_name}</p>
+                        <p className="text-white text-base font-medium">{q.quote_number}</p>
+                        <p className="text-gray-400 text-sm">{q.client_name}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-white text-sm font-medium">{q.total_ttc?.toFixed(2)} €</span>
+                        <span className="text-white text-base font-medium">{q.total_ttc?.toFixed(2)} €</span>
                         <StatusBadge status={q.status} />
                       </div>
                     </div>
                   ))}
-                  {quotes.length === 0 && <p className="text-gray-500 text-sm">Aucun devis</p>}
+                  {quotes.length === 0 && <p className="text-gray-500 text-base">Aucun devis</p>}
                 </div>
               </div>
               <div className="bg-[#121212] border border-white/5 rounded-sm p-5">
                 <h3 className="font-outfit font-semibold text-white mb-4 flex items-center justify-between">
                   Factures récentes
-                  <button onClick={() => setTab("invoices")} className="text-xs text-[#D4AF37] hover:underline">Voir tout</button>
+                  <button onClick={() => setTab("invoices")} className="text-sm text-[#D4AF37] hover:underline">Voir tout</button>
                 </h3>
                 <div className="space-y-3">
                   {invoices.slice(0, 5).map(inv => (
                     <div key={inv.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                       <div>
-                        <p className="text-white text-sm font-medium">{inv.invoice_number}</p>
-                        <p className="text-gray-400 text-xs">{inv.client_name}</p>
+                        <p className="text-white text-base font-medium">{inv.invoice_number}</p>
+                        <p className="text-gray-400 text-sm">{inv.client_name}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-white text-sm font-medium">{inv.total_ttc?.toFixed(2)} €</span>
+                        <span className="text-white text-base font-medium">{inv.total_ttc?.toFixed(2)} €</span>
                         <StatusBadge status={inv.status} />
                       </div>
                     </div>
                   ))}
-                  {invoices.length === 0 && <p className="text-gray-500 text-sm">Aucune facture</p>}
+                  {invoices.length === 0 && <p className="text-gray-500 text-base">Aucune facture</p>}
                 </div>
               </div>
             </div>
@@ -621,45 +621,45 @@ export default function AdminDashboard() {
 
           return (
             <div>
-              <h1 className="font-outfit font-bold text-2xl text-white mb-6">Analytiques</h1>
+              <h1 className="font-outfit font-bold text-3xl text-white mb-6">Analytiques</h1>
 
               {/* KPI cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <div className="bg-[#121212] border border-white/5 p-5 rounded-sm">
-                  <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">CA Total encaissé</p>
-                  <p className="font-outfit font-bold text-2xl text-[#D4AF37]">{caTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €</p>
+                  <p className="text-sm text-gray-500 uppercase tracking-widest mb-2">CA Total encaissé</p>
+                  <p className="font-outfit font-bold text-3xl text-[#D4AF37]">{caTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €</p>
                 </div>
                 <div className="bg-[#121212] border border-white/5 p-5 rounded-sm">
-                  <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">CA ce mois</p>
-                  <p className="font-outfit font-bold text-2xl text-green-400">{caMois.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €</p>
+                  <p className="text-sm text-gray-500 uppercase tracking-widest mb-2">CA ce mois</p>
+                  <p className="font-outfit font-bold text-3xl text-green-400">{caMois.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €</p>
                 </div>
                 <div className="bg-[#121212] border border-white/5 p-5 rounded-sm">
-                  <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Taux de conversion</p>
-                  <p className="font-outfit font-bold text-2xl text-blue-400">{tauxConversion}%</p>
-                  <p className="text-xs text-gray-600 mt-1">{convertedQuotes}/{totalQuotes} devis</p>
+                  <p className="text-sm text-gray-500 uppercase tracking-widest mb-2">Taux de conversion</p>
+                  <p className="font-outfit font-bold text-3xl text-blue-400">{tauxConversion}%</p>
+                  <p className="text-sm text-gray-600 mt-1">{convertedQuotes}/{totalQuotes} devis</p>
                 </div>
                 <div className="bg-[#121212] border border-white/5 p-5 rounded-sm">
-                  <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Demandes wizard</p>
-                  <p className="font-outfit font-bold text-2xl text-purple-400">{quoteRequests.length}</p>
-                  <p className="text-xs text-gray-600 mt-1">via formulaire /devis</p>
+                  <p className="text-sm text-gray-500 uppercase tracking-widest mb-2">Demandes wizard</p>
+                  <p className="font-outfit font-bold text-3xl text-purple-400">{quoteRequests.length}</p>
+                  <p className="text-sm text-gray-600 mt-1">via formulaire /devis</p>
                 </div>
               </div>
 
               <div className="grid lg:grid-cols-2 gap-6">
                 {/* CA mensuel — barres CSS */}
                 <div className="bg-[#121212] border border-white/5 rounded-sm p-5">
-                  <h3 className="font-outfit font-semibold text-white mb-5 text-sm">CA encaissé — 6 derniers mois</h3>
+                  <h3 className="font-outfit font-semibold text-white mb-5 text-base">CA encaissé — 6 derniers mois</h3>
                   <div className="space-y-3">
                     {monthlyCA.map(m => (
                       <div key={`${m.month}-${m.year}`} className="flex items-center gap-3">
-                        <span className="text-xs text-gray-500 w-14 flex-shrink-0 capitalize">{m.label}</span>
+                        <span className="text-sm text-gray-500 w-14 flex-shrink-0 capitalize">{m.label}</span>
                         <div className="flex-1 bg-white/5 rounded-sm h-5 overflow-hidden">
                           <div
                             className="h-full bg-[#D4AF37]/70 rounded-sm transition-all duration-500"
                             style={{ width: `${maxCA > 0 ? (m.ca / maxCA) * 100 : 0}%` }}
                           />
                         </div>
-                        <span className="text-xs text-gray-300 w-20 text-right flex-shrink-0">{m.ca.toLocaleString("fr-FR")} €</span>
+                        <span className="text-sm text-gray-300 w-20 text-right flex-shrink-0">{m.ca.toLocaleString("fr-FR")} €</span>
                       </div>
                     ))}
                   </div>
@@ -667,7 +667,7 @@ export default function AdminDashboard() {
 
                 {/* Statuts devis */}
                 <div className="bg-[#121212] border border-white/5 rounded-sm p-5">
-                  <h3 className="font-outfit font-semibold text-white mb-5 text-sm">Répartition des devis</h3>
+                  <h3 className="font-outfit font-semibold text-white mb-5 text-base">Répartition des devis</h3>
                   <div className="space-y-3">
                     {[
                       { label: "Brouillons", count: quotes.filter(q => q.status === "draft").length, color: "bg-gray-500/60" },
@@ -677,17 +677,17 @@ export default function AdminDashboard() {
                       { label: "Refusés", count: quotes.filter(q => q.status === "refused").length, color: "bg-red-500/60" },
                     ].map(s => (
                       <div key={s.label} className="flex items-center gap-3">
-                        <span className="text-xs text-gray-500 w-20 flex-shrink-0">{s.label}</span>
+                        <span className="text-sm text-gray-500 w-20 flex-shrink-0">{s.label}</span>
                         <div className="flex-1 bg-white/5 rounded-sm h-5 overflow-hidden">
                           <div
                             className={`h-full ${s.color} rounded-sm transition-all duration-500`}
                             style={{ width: `${totalQuotes > 0 ? (s.count / totalQuotes) * 100 : 0}%` }}
                           />
                         </div>
-                        <span className="text-xs text-gray-300 w-6 text-right flex-shrink-0">{s.count}</span>
+                        <span className="text-sm text-gray-300 w-6 text-right flex-shrink-0">{s.count}</span>
                       </div>
                     ))}
-                    {totalQuotes === 0 && <p className="text-gray-500 text-sm">Aucun devis</p>}
+                    {totalQuotes === 0 && <p className="text-gray-500 text-base">Aucun devis</p>}
                   </div>
                 </div>
               </div>
@@ -698,38 +698,38 @@ export default function AdminDashboard() {
         {/* Quote Requests Tab */}
         {tab === "requests" && (
           <div>
-            <h1 className="font-outfit font-bold text-2xl text-white mb-6">Demandes de devis via Wizard ({quoteRequests.length})</h1>
+            <h1 className="font-outfit font-bold text-3xl text-white mb-6">Demandes de devis via Wizard ({quoteRequests.length})</h1>
             <div className="space-y-3">
               {quoteRequests.map((r, i) => (
                 <div key={r.id || i} className="bg-[#121212] border border-white/5 rounded-sm p-5">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-3 mb-2">
-                        <p className="font-outfit font-semibold text-white text-sm">{r.name || "—"}</p>
-                        <span className="text-xs text-gray-500">{r.email}</span>
-                        {r.phone && <span className="text-xs text-gray-500">{r.phone}</span>}
+                        <p className="font-outfit font-semibold text-white text-base">{r.name || "—"}</p>
+                        <span className="text-sm text-gray-500">{r.email}</span>
+                        {r.phone && <span className="text-sm text-gray-500">{r.phone}</span>}
                       </div>
                       <div className="flex flex-wrap gap-2 mb-2">
-                        {r.project_type && <span className="text-xs bg-[#D4AF37]/10 text-[#D4AF37] px-2 py-0.5 rounded-sm">{r.project_type}</span>}
-                        {r.commune && <span className="text-xs bg-white/5 text-gray-300 px-2 py-0.5 rounded-sm">{r.commune}</span>}
-                        {r.budget_range && <span className="text-xs bg-white/5 text-gray-300 px-2 py-0.5 rounded-sm">{r.budget_range}</span>}
-                        {r.desired_delay && <span className="text-xs bg-white/5 text-gray-300 px-2 py-0.5 rounded-sm">{r.desired_delay}</span>}
+                        {r.project_type && <span className="text-sm bg-[#D4AF37]/10 text-[#D4AF37] px-2 py-0.5 rounded-sm">{r.project_type}</span>}
+                        {r.commune && <span className="text-sm bg-white/5 text-gray-300 px-2 py-0.5 rounded-sm">{r.commune}</span>}
+                        {r.budget_range && <span className="text-sm bg-white/5 text-gray-300 px-2 py-0.5 rounded-sm">{r.budget_range}</span>}
+                        {r.desired_delay && <span className="text-sm bg-white/5 text-gray-300 px-2 py-0.5 rounded-sm">{r.desired_delay}</span>}
                       </div>
                       {r.services?.length > 0 && (
-                        <p className="text-xs text-gray-400">Prestations : {r.services.join(", ")}</p>
+                        <p className="text-sm text-gray-400">Prestations : {r.services.join(", ")}</p>
                       )}
                       {r.description && (
-                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{r.description}</p>
+                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">{r.description}</p>
                       )}
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-xs text-gray-500">{new Date(r.created_at).toLocaleDateString("fr-FR")}</p>
+                      <p className="text-sm text-gray-500">{new Date(r.created_at).toLocaleDateString("fr-FR")}</p>
                       {r.estimated_total_ttc > 0 && (
-                        <p className="text-[#D4AF37] font-bold text-sm mt-1" data-testid={`estimated-ttc-${r.id}`}>
+                        <p className="text-[#D4AF37] font-bold text-base mt-1" data-testid={`estimated-ttc-${r.id}`}>
                           ~ {r.estimated_total_ttc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} € TTC
                         </p>
                       )}
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-sm mt-1 inline-block ${
+                      <span className={`text-sm font-semibold px-2 py-1 rounded-sm mt-1 inline-block ${
                         r.status === "new" ? "bg-blue-400/10 text-blue-400"
                         : r.status === "converted" ? "bg-purple-400/10 text-purple-400"
                         : "bg-gray-400/10 text-gray-400"
@@ -741,7 +741,7 @@ export default function AdminDashboard() {
                           data-testid={`convert-request-${r.id}`}
                           onClick={() => convertRequestToInvoice(r.id)}
                           disabled={convertingId === r.id}
-                          className="mt-2 flex items-center gap-1.5 bg-[#D4AF37] text-black text-xs font-bold px-3 py-1.5 hover:bg-[#E6C65A] transition-colors disabled:opacity-60 rounded-sm ml-auto">
+                          className="mt-2 flex items-center gap-1.5 bg-[#D4AF37] text-black text-sm font-bold px-3 py-1.5 hover:bg-[#E6C65A] transition-colors disabled:opacity-60 rounded-sm ml-auto">
                           <Receipt size={11}/>
                           {convertingId === r.id ? "Conversion..." : "Créer Facture"}
                         </button>
@@ -752,7 +752,7 @@ export default function AdminDashboard() {
               ))}
               {quoteRequests.length === 0 && (
                 <div className="bg-[#121212] border border-white/5 rounded-sm p-12 text-center">
-                  <p className="text-gray-500 text-sm">Aucune demande via le wizard pour le moment</p>
+                  <p className="text-gray-500 text-base">Aucune demande via le wizard pour le moment</p>
                 </div>
               )}
             </div>
@@ -777,13 +777,13 @@ export default function AdminDashboard() {
         {/* Clients Tab */}
         {tab === "clients" && (
           <div>
-            <h1 className="font-outfit font-bold text-2xl text-white mb-6">Clients ({clients.length})</h1>
+            <h1 className="font-outfit font-bold text-3xl text-white mb-6">Clients ({clients.length})</h1>
             <div className="bg-[#121212] border border-white/5 rounded-sm overflow-hidden">
-              <table className="w-full text-sm">
+              <table className="w-full text-base">
                 <thead className="border-b border-white/5">
                   <tr className="text-left">
                     {["Nom", "Email", "Téléphone", "Inscrit le"].map(h => (
-                      <th key={h} className="px-4 py-3 text-xs text-gray-400 uppercase tracking-wider font-semibold">{h}</th>
+                      <th key={h} className="px-4 py-3 text-sm text-gray-400 uppercase tracking-wider font-semibold">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -793,7 +793,7 @@ export default function AdminDashboard() {
                       <td className="px-4 py-3 text-white font-medium">{c.name}</td>
                       <td className="px-4 py-3 text-gray-300">{c.email}</td>
                       <td className="px-4 py-3 text-gray-300">{c.phone || "—"}</td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">{new Date(c.created_at).toLocaleDateString("fr-FR")}</td>
+                      <td className="px-4 py-3 text-gray-400 text-sm">{new Date(c.created_at).toLocaleDateString("fr-FR")}</td>
                     </tr>
                   ))}
                   {clients.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-500">Aucun client</td></tr>}
@@ -807,10 +807,10 @@ export default function AdminDashboard() {
         {tab === "quotes" && (
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h1 className="font-outfit font-bold text-2xl text-white">Devis ({quotes.length})</h1>
+              <h1 className="font-outfit font-bold text-3xl text-white">Devis ({quotes.length})</h1>
               <button onClick={() => { setEditQuote(null); setShowQuoteForm(true); }}
                 data-testid="create-quote-btn"
-                className="flex items-center gap-2 bg-[#D4AF37] text-black font-bold px-5 py-2.5 hover:bg-[#E6C65A] transition-colors text-sm">
+                className="flex items-center gap-2 bg-[#D4AF37] text-black font-bold px-5 py-2.5 hover:bg-[#E6C65A] transition-colors text-base">
                 <Plus size={16}/> Nouveau devis
               </button>
             </div>
@@ -820,11 +820,11 @@ export default function AdminDashboard() {
                 onCancel={() => { setShowQuoteForm(false); setEditQuote(null); }} />
             )}
             <div className="bg-[#121212] border border-white/5 rounded-sm overflow-hidden">
-              <table className="w-full text-sm">
+              <table className="w-full text-base">
                 <thead className="border-b border-white/5">
                   <tr className="text-left">
                     {["Numéro", "Client", "Montant TTC", "Statut", "Date", "Actions"].map(h => (
-                      <th key={h} className="px-4 py-3 text-xs text-gray-400 uppercase tracking-wider font-semibold">{h}</th>
+                      <th key={h} className="px-4 py-3 text-sm text-gray-400 uppercase tracking-wider font-semibold">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -835,7 +835,7 @@ export default function AdminDashboard() {
                       <td className="px-4 py-3 text-white">{q.client_name}</td>
                       <td className="px-4 py-3 text-white font-medium">{q.total_ttc?.toFixed(2)} €</td>
                       <td className="px-4 py-3"><StatusBadge status={q.status}/></td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">{new Date(q.created_at).toLocaleDateString("fr-FR")}</td>
+                      <td className="px-4 py-3 text-gray-400 text-sm">{new Date(q.created_at).toLocaleDateString("fr-FR")}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           {q.status === "draft" && (
@@ -874,16 +874,16 @@ export default function AdminDashboard() {
         {/* Invoices Tab */}
         {tab === "invoices" && (
           <div>
-            <h1 className="font-outfit font-bold text-2xl text-white mb-6">Factures ({invoices.length})</h1>
+            <h1 className="font-outfit font-bold text-3xl text-white mb-6">Factures ({invoices.length})</h1>
             {selectedInvoice ? (
               <InvoiceDetail invoice={selectedInvoice} onBack={() => { setSelectedInvoice(null); fetchAll(); }} />
             ) : (
               <div className="bg-[#121212] border border-white/5 rounded-sm overflow-hidden">
-                <table className="w-full text-sm">
+                <table className="w-full text-base">
                   <thead className="border-b border-white/5">
                     <tr className="text-left">
                       {["Numéro", "Client", "Montant TTC", "Tranches", "Statut", "Date", "Actions"].map(h => (
-                        <th key={h} className="px-4 py-3 text-xs text-gray-400 uppercase tracking-wider font-semibold">{h}</th>
+                        <th key={h} className="px-4 py-3 text-sm text-gray-400 uppercase tracking-wider font-semibold">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -895,7 +895,7 @@ export default function AdminDashboard() {
                         <td className="px-4 py-3 text-white font-medium">{inv.total_ttc?.toFixed(2)} €</td>
                         <td className="px-4 py-3 text-gray-300">{inv.payment_tranches?.length || 0} tranche(s)</td>
                         <td className="px-4 py-3"><StatusBadge status={inv.status}/></td>
-                        <td className="px-4 py-3 text-gray-400 text-xs">{new Date(inv.created_at).toLocaleDateString("fr-FR")}</td>
+                        <td className="px-4 py-3 text-gray-400 text-sm">{new Date(inv.created_at).toLocaleDateString("fr-FR")}</td>
                         <td className="px-4 py-3">
                           <div className="flex gap-2">
                             <button onClick={() => setSelectedInvoice(inv)} title="Gérer"
@@ -921,13 +921,13 @@ export default function AdminDashboard() {
         {/* Payments Tab */}
         {tab === "payments" && (
           <div>
-            <h1 className="font-outfit font-bold text-2xl text-white mb-6">Paiements ({payments.length})</h1>
+            <h1 className="font-outfit font-bold text-3xl text-white mb-6">Paiements ({payments.length})</h1>
             <div className="bg-[#121212] border border-white/5 rounded-sm overflow-hidden">
-              <table className="w-full text-sm">
+              <table className="w-full text-base">
                 <thead className="border-b border-white/5">
                   <tr className="text-left">
                     {["Facture", "Client", "Tranche", "Montant", "Statut", "Date"].map(h => (
-                      <th key={h} className="px-4 py-3 text-xs text-gray-400 uppercase tracking-wider font-semibold">{h}</th>
+                      <th key={h} className="px-4 py-3 text-sm text-gray-400 uppercase tracking-wider font-semibold">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -936,10 +936,10 @@ export default function AdminDashboard() {
                     <tr key={p.id} className="border-b border-white/3 hover:bg-white/2">
                       <td className="px-4 py-3 text-[#D4AF37] font-medium">{p.invoice_number}</td>
                       <td className="px-4 py-3 text-white">{p.client_name}</td>
-                      <td className="px-4 py-3 text-gray-300 text-xs">{p.tranche_label}</td>
+                      <td className="px-4 py-3 text-gray-300 text-sm">{p.tranche_label}</td>
                       <td className="px-4 py-3 text-white font-medium">{p.amount?.toFixed(2)} €</td>
                       <td className="px-4 py-3"><StatusBadge status={p.payment_status}/></td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">{new Date(p.created_at).toLocaleDateString("fr-FR")}</td>
+                      <td className="px-4 py-3 text-gray-400 text-sm">{new Date(p.created_at).toLocaleDateString("fr-FR")}</td>
                     </tr>
                   ))}
                   {payments.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Aucun paiement</td></tr>}

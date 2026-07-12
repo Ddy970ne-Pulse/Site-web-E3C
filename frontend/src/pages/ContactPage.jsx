@@ -109,13 +109,13 @@ export default function ContactPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-[#D4AF37]/5 to-transparent" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-32 bg-gradient-to-b from-[#D4AF37]/50 to-transparent" />
         <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
-          <p className="text-[#D4AF37] text-xs font-bold uppercase tracking-widest mb-3">
+          <p className="text-[#D4AF37] text-sm font-bold uppercase tracking-widest mb-3">
             Contactez-nous
           </p>
-          <h1 className="font-outfit font-bold text-4xl sm:text-5xl text-[#1A1A1A] dark:text-white mb-4 leading-tight">
+          <h1 className="font-outfit font-bold text-5xl sm:text-6xl text-[#1A1A1A] dark:text-white mb-4 leading-tight">
             Parlons de votre projet
           </h1>
-          <p className="text-[#737373] dark:text-gray-400 text-base md:text-lg leading-relaxed max-w-xl mx-auto">
+          <p className="text-[#737373] dark:text-gray-400 text-lg md:text-xl leading-relaxed max-w-xl mx-auto">
             Devis gratuit, réponse rapide. Plusieurs moyens de nous joindre —
             choisissez celui qui vous convient le mieux.
           </p>
@@ -136,9 +136,9 @@ export default function ContactPage() {
                 <div className={`w-9 h-9 flex items-center justify-center mb-3 ${ch.color}`}>
                   <Icon />
                 </div>
-                <p className={`font-outfit font-semibold text-[#1A1A1A] dark:text-white text-sm mb-0.5`}>{ch.title}</p>
-                <p className="text-[#9E9E9E] dark:text-gray-500 text-xs mb-1">{ch.subtitle}</p>
-                <p className={`font-medium text-sm ${ch.color}`}>{ch.value}</p>
+                <p className={`font-outfit font-semibold text-[#1A1A1A] dark:text-white text-base mb-0.5`}>{ch.title}</p>
+                <p className="text-[#9E9E9E] dark:text-gray-500 text-sm mb-1">{ch.subtitle}</p>
+                <p className={`font-medium text-base ${ch.color}`}>{ch.value}</p>
               </div>
             );
             if (ch.href && ch.external)
@@ -154,11 +154,11 @@ export default function ContactPage() {
           {/* Left — Info */}
           <div className="lg:col-span-2 space-y-6">
             <div>
-              <h2 className="font-outfit font-bold text-2xl text-[#1A1A1A] dark:text-white mb-2">
+              <h2 className="font-outfit font-bold text-3xl text-[#1A1A1A] dark:text-white mb-2">
                 E3C — Entreprise de constructions
               </h2>
               <div className="section-divider mb-4" />
-              <p className="text-[#737373] dark:text-gray-400 text-sm leading-relaxed">
+              <p className="text-[#737373] dark:text-gray-400 text-base leading-relaxed">
                 Entreprise de construction et rénovation tous corps d'état,
                 implantée en Guadeloupe. Notre équipe intervient rapidement sur
                 l'ensemble du territoire pour tous vos projets BTP.
@@ -167,7 +167,7 @@ export default function ContactPage() {
 
             {/* Quick contact buttons */}
             <div className="space-y-3">
-              <p className="text-xs text-[#9E9E9E] dark:text-gray-500 uppercase tracking-widest font-semibold">
+              <p className="text-sm text-[#9E9E9E] dark:text-gray-500 uppercase tracking-widest font-semibold">
                 Contact rapide
               </p>
               <a
@@ -181,24 +181,24 @@ export default function ContactPage() {
                   <span className="text-green-400"><WHATSAPP_SVG /></span>
                 </div>
                 <div>
-                  <p className="text-[#1A1A1A] dark:text-white text-sm font-medium">WhatsApp</p>
-                  <p className="text-[#9E9E9E] dark:text-gray-500 text-xs">Devis gratuit · Réponse rapide</p>
+                  <p className="text-[#1A1A1A] dark:text-white text-base font-medium">WhatsApp</p>
+                  <p className="text-[#9E9E9E] dark:text-gray-500 text-sm">Devis gratuit · Réponse rapide</p>
                 </div>
               </a>
             </div>
 
             {/* Espace client promo */}
             <div className="p-5 bg-[#D4AF37]/5 border border-[#D4AF37]/15 rounded-sm">
-              <p className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-sm mb-1">
+              <p className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-base mb-1">
                 Vous êtes déjà client ?
               </p>
-              <p className="text-[#737373] dark:text-gray-400 text-xs leading-relaxed mb-3">
+              <p className="text-[#737373] dark:text-gray-400 text-sm leading-relaxed mb-3">
                 Accédez à votre espace personnel pour consulter vos devis,
                 factures et effectuer vos paiements.
               </p>
               <button
                 onClick={() => navigate("/connexion")}
-                className="text-[#D4AF37] text-xs font-bold hover:underline"
+                className="text-[#D4AF37] text-sm font-bold hover:underline"
               >
                 Accéder à mon espace →
               </button>
@@ -213,10 +213,10 @@ export default function ContactPage() {
                   <MessageSquare size={16} className="text-[#D4AF37]" />
                 </div>
                 <div>
-                  <h3 className="font-outfit font-bold text-[#1A1A1A] dark:text-white text-lg leading-tight">
+                  <h3 className="font-outfit font-bold text-[#1A1A1A] dark:text-white text-xl leading-tight">
                     Formulaire de contact
                   </h3>
-                  <p className="text-[#9E9E9E] dark:text-gray-500 text-xs">Réponse sous 24h — Devis gratuit</p>
+                  <p className="text-[#9E9E9E] dark:text-gray-500 text-sm">Réponse sous 24h — Devis gratuit</p>
                 </div>
               </div>
 
@@ -227,8 +227,8 @@ export default function ContactPage() {
                 >
                   <CheckCircle size={16} />
                   <div>
-                    <p className="text-sm font-medium">Message envoyé avec succès !</p>
-                    <p className="text-xs opacity-80">Nous vous répondrons dans les plus brefs délais.</p>
+                    <p className="text-base font-medium">Message envoyé avec succès !</p>
+                    <p className="text-sm opacity-80">Nous vous répondrons dans les plus brefs délais.</p>
                   </div>
                 </div>
               )}
@@ -238,67 +238,67 @@ export default function ContactPage() {
                   className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 text-red-400 p-4 mb-5 rounded-sm"
                 >
                   <AlertCircle size={16} />
-                  <p className="text-sm">Une erreur est survenue. Appelez-nous directement.</p>
+                  <p className="text-base">Une erreur est survenue. Appelez-nous directement.</p>
                 </div>
               )}
 
               <form onSubmit={handleSubmit} data-testid="contact-page-form" className="space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Nom complet *</label>
+                    <label className="block text-sm text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Nom complet *</label>
                     <input
                       type="text" name="name" value={form.name} onChange={handleChange} required
                       placeholder="Votre nom" data-testid="contact-page-name"
-                      className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm"
+                      className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-base rounded-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Email *</label>
+                    <label className="block text-sm text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Email *</label>
                     <input
                       type="email" name="email" value={form.email} onChange={handleChange} required
                       placeholder="votre@email.com" data-testid="contact-page-email"
-                      className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm"
+                      className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-base rounded-sm"
                     />
                   </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Téléphone</label>
+                    <label className="block text-sm text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Téléphone</label>
                     <input
                       type="tel" name="phone" value={form.phone} onChange={handleChange}
                       placeholder="0690 XX XX XX" data-testid="contact-page-phone-input"
-                      className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm"
+                      className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-base rounded-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Commune</label>
+                    <label className="block text-sm text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Commune</label>
                     <input
                       type="text" name="commune" value={form.commune} onChange={handleChange}
                       placeholder="Votre commune" data-testid="contact-page-commune"
-                      className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm"
+                      className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-base rounded-sm"
                     />
                   </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Sujet *</label>
+                    <label className="block text-sm text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Sujet *</label>
                     <select
                       name="subject" value={form.subject} onChange={handleChange} required
                       data-testid="contact-page-subject"
-                      className="w-full bg-[#F5F4F0] dark:bg-[#1A1A1A] border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white px-4 py-2.5 text-sm rounded-sm"
+                      className="w-full bg-[#F5F4F0] dark:bg-[#1A1A1A] border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white px-4 py-2.5 text-base rounded-sm"
                     >
                       <option value="">Choisir un sujet</option>
                       {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Prestation</label>
+                    <label className="block text-sm text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Prestation</label>
                     <select
                       name="service" value={form.service} onChange={handleChange}
                       data-testid="contact-page-service"
-                      className="w-full bg-[#F5F4F0] dark:bg-[#1A1A1A] border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white px-4 py-2.5 text-sm rounded-sm"
+                      className="w-full bg-[#F5F4F0] dark:bg-[#1A1A1A] border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white px-4 py-2.5 text-base rounded-sm"
                     >
                       <option value="">Sélectionner (optionnel)</option>
                       {SERVICES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -307,12 +307,12 @@ export default function ContactPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Message *</label>
+                  <label className="block text-sm text-[#737373] dark:text-gray-400 uppercase tracking-wider mb-1.5">Message *</label>
                   <textarea
                     name="message" value={form.message} onChange={handleChange} required rows={5}
                     placeholder="Décrivez votre projet, vos besoins, délais souhaités..."
                     data-testid="contact-page-message"
-                    className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-sm rounded-sm resize-none"
+                    className="w-full bg-[#F5F4F0] dark:bg-white/5 border border-black/10 dark:border-white/10 text-[#1A1A1A] dark:text-white placeholder-[#ADADAD] dark:placeholder-gray-600 px-4 py-2.5 text-base rounded-sm resize-none"
                   />
                 </div>
 
@@ -324,7 +324,7 @@ export default function ContactPage() {
                   >
                     <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${sendViaWhatsApp ? "translate-x-5" : "translate-x-0"}`} />
                   </div>
-                  <span className="text-[#737373] dark:text-gray-400 text-sm group-hover:text-[#1A1A1A] dark:group-hover:text-gray-200 transition-colors">
+                  <span className="text-[#737373] dark:text-gray-400 text-base group-hover:text-[#1A1A1A] dark:group-hover:text-gray-200 transition-colors">
                     Envoyer aussi via WhatsApp
                   </span>
                 </label>
@@ -333,13 +333,13 @@ export default function ContactPage() {
                   type="submit"
                   disabled={loading}
                   data-testid="contact-page-submit"
-                  className="w-full flex items-center justify-center gap-2 bg-[#D4AF37] text-black font-bold py-4 hover:bg-[#E6C65A] transition-colors disabled:opacity-60 text-sm tracking-wide rounded-sm"
+                  className="w-full flex items-center justify-center gap-2 bg-[#D4AF37] text-black font-bold py-4 hover:bg-[#E6C65A] transition-colors disabled:opacity-60 text-base tracking-wide rounded-sm"
                 >
                   <Send size={15} />
                   {loading ? "Envoi en cours..." : "Envoyer mon message"}
                 </button>
 
-                <p className="text-center text-xs text-[#ADADAD] dark:text-gray-600">
+                <p className="text-center text-sm text-[#ADADAD] dark:text-gray-600">
                   Vos données sont traitées conformément au RGPD · Réponse garantie sous 24h
                 </p>
               </form>

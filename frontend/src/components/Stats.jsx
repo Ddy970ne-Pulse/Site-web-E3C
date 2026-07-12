@@ -19,10 +19,10 @@ export default function Stats() {
               data-testid={`stat-item-${i}`}
               className="flex flex-col items-center text-center"
             >
-              <span className="font-outfit font-black text-3xl md:text-4xl text-black leading-tight">
+              <span className="font-outfit font-black text-4xl md:text-5xl text-black leading-tight">
                 {stat.value}
               </span>
-              <span className="text-xs md:text-sm font-semibold text-black/70 uppercase tracking-wider mt-1">
+              <span className="text-sm md:text-base font-semibold text-black/70 uppercase tracking-wider mt-1">
                 {stat.label}
               </span>
             </div>
