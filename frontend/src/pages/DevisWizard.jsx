@@ -388,7 +388,7 @@ export default function DevisWizard() {
                       </div>
                       <div className="mt-3 flex items-start gap-2.5 bg-amber-50 dark:bg-[#D4AF37]/5 border border-amber-200 dark:border-[#D4AF37]/20 rounded-sm p-3">
                         <Info size={13} className="text-amber-600 dark:text-[#D4AF37] mt-0.5 flex-shrink-0"/>
-                        <p className="text-amber-800 dark:text-[#D4AF37]/80 text-xs leading-relaxed">
+                        <p className="text-amber-800 dark:text-[#D4AF37]/80 text-sm leading-relaxed">
                           <span className="font-semibold">Estimation prévisionnelle.</span> Ces montants sont calculés sur la base des informations communiquées et restent indicatifs. Une visite technique de l'un de nos experts permettra de confirmer et finaliser le devis définitif.
                         </p>
                       </div>
@@ -537,7 +537,7 @@ export default function DevisWizard() {
               {/* Disclaimer estimatif — étape finale */}
               <div className="mt-4 flex items-start gap-2.5 bg-amber-50/60 dark:bg-[#D4AF37]/4 border border-amber-200/70 dark:border-[#D4AF37]/15 rounded-sm p-3.5">
                 <Info size={14} className="text-amber-600 dark:text-[#D4AF37] mt-0.5 flex-shrink-0"/>
-                <p className="text-amber-800 dark:text-[#D4AF37]/75 text-xs leading-relaxed">
+                <p className="text-amber-800 dark:text-[#D4AF37]/75 text-sm leading-relaxed">
                   <span className="font-semibold">Estimation prévisionnelle, non contractuelle.</span> Ce chiffrage est établi à partir des éléments transmis. Afin de garantir la précision du devis définitif, une visite technique <strong>gratuite</strong> par un expert E3C sera programmée. Tout ajustement éventuel vous sera soumis pour validation avant tout engagement.
                 </p>
               </div>
