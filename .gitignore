@@ -30,6 +30,9 @@ next-env.d.ts
 dist/
 dist
 
+# Local dev data (MongoDB, etc.)
+.devdata/
+
 # Environment files (comprehensive coverage)
 
 *token.json*
@@ -60,6 +63,7 @@ chainlit.md
 
 # Deployment
 .vercel
+.emergent/
 
 # Data and databases
 agenthub/agents/youtube/db
@@ -92,3 +96,8 @@ android-sdk/-e
 credentials.json
 *.key
 .credentials
+
+# Keep the documented example env files even though .env.* is ignored above
+!.env.example
+!backend/.env.example
+!frontend/.env.example

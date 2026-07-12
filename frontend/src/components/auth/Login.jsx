@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Eye, EyeOff, LogIn } from "lucide-react";
+import GoogleSignInButton from "./GoogleSignInButton";
+import FacebookSignInButton from "./FacebookSignInButton";
+
+const GOOGLE_AUTH_ENABLED = Boolean(process.env.REACT_APP_GOOGLE_CLIENT_ID);
+const FACEBOOK_AUTH_ENABLED = Boolean(process.env.REACT_APP_FACEBOOK_APP_ID);
+const SOCIAL_AUTH_ENABLED = GOOGLE_AUTH_ENABLED || FACEBOOK_AUTH_ENABLED;
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, googleLogin, facebookLogin } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -25,6 +31,21 @@ export default function Login() {
     } finally { setLoading(false); }
   };
 
+  const handleSocialAuth = useCallback((loginFn, providerLabel) => async (token) => {
+    setError(""); setLoading(true);
+    try {
+      const user = await loginFn(token);
+      navigate(user.role === "admin" ? "/admin" : "/espace-client", { replace: true });
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      setError(typeof detail === "string" ? detail : `Connexion ${providerLabel} impossible`);
+    } finally { setLoading(false); }
+  }, [navigate]);
+
+  const handleSocialError = useCallback((providerLabel) => (err) => {
+    setError(err?.message || `Connexion ${providerLabel} impossible`);
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#FAFAF8] dark:bg-[#0A0A0A] flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -44,6 +65,27 @@ export default function Login() {
             <div data-testid="login-error" className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 p-3 mb-5 text-sm rounded-sm">
               {error}
             </div>
+          )}
+          {SOCIAL_AUTH_ENABLED && (
+            <>
+              <div className="space-y-3">
+                {GOOGLE_AUTH_ENABLED && (
+                  <GoogleSignInButton
+                    onSuccess={handleSocialAuth(googleLogin, "Google")}
+                    onError={handleSocialError("Google")} />
+                )}
+                {FACEBOOK_AUTH_ENABLED && (
+                  <FacebookSignInButton
+                    onSuccess={handleSocialAuth(facebookLogin, "Facebook")}
+                    onError={handleSocialError("Facebook")} />
+                )}
+              </div>
+              <div className="flex items-center gap-3 my-6">
+                <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
+                <span className="text-xs text-[#9E9E9E] dark:text-gray-500 uppercase tracking-wider">ou</span>
+                <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
+              </div>
+            </>
           )}
           <form onSubmit={submit} className="space-y-5">
             <div>

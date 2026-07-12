@@ -25,13 +25,25 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const googleLogin = async (credential) => {
+    const { data } = await axios.post(`${API}/auth/google`, { credential }, { withCredentials: true });
+    setUser(data);
+    return data;
+  };
+
+  const facebookLogin = async (accessToken) => {
+    const { data } = await axios.post(`${API}/auth/facebook`, { access_token: accessToken }, { withCredentials: true });
+    setUser(data);
+    return data;
+  };
+
   const logout = async () => {
     await axios.post(`${API}/auth/logout`, {}, { withCredentials: true });
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, register, logout, loading: user === undefined }}>
+    <AuthContext.Provider value={{ user, setUser, login, register, googleLogin, facebookLogin, logout, loading: user === undefined }}>
       {children}
     </AuthContext.Provider>
   );

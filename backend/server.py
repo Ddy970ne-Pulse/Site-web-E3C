@@ -1,13 +1,18 @@
+from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(Path(__file__).parent / ".env")
 
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_auth_requests
+import stripe as stripe_sdk
+import diagnostics
+import httpx
 import os, logging, uuid, bcrypt, jwt, asyncio, secrets, io, shutil
-from pathlib import Path
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta, date
@@ -17,17 +22,42 @@ from bson import ObjectId
 ROOT_DIR = Path(__file__).parent
 UPLOADS_DIR = ROOT_DIR / "uploads" / "gallery"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Secrets that were previously committed to source as hardcoded defaults.
+# Never allow these values again, even if an operator re-enters them by hand.
+_LEAKED_DEFAULTS = {"E3C@Admin2026"}
+
+def require_env(name: str, min_length: int = 1) -> str:
+    value = os.environ.get(name, "")
+    if len(value) < min_length:
+        raise RuntimeError(
+            f"{name} environment variable is required and must be at least "
+            f"{min_length} characters. Refusing to start with a missing or weak value."
+        )
+    if value in _LEAKED_DEFAULTS:
+        raise RuntimeError(
+            f"{name} matches a default value that was previously hardcoded in "
+            f"source and committed to the repo's public history. Choose a new, unique value."
+        )
+    return value
+
 mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
-JWT_SECRET = os.environ["JWT_SECRET"]
+JWT_SECRET = require_env("JWT_SECRET", min_length=32)
 JWT_ALGORITHM = "HS256"
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@e3c-construction.com")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "E3C@Admin2026")
-STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "sk_test_emergent")
+ADMIN_PASSWORD = require_env("ADMIN_PASSWORD", min_length=12)
+STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+stripe_sdk.api_key = STRIPE_API_KEY
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "noreply@e3c-construction.com")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+FACEBOOK_APP_ID = os.environ.get("FACEBOOK_APP_ID", "")
+FACEBOOK_APP_SECRET = os.environ.get("FACEBOOK_APP_SECRET", "")
+COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -91,7 +121,6 @@ async def send_email(to_email: str, subject: str, html: str):
     if not BREVO_API_KEY:
         logger.info(f"[EMAIL SKIPPED - No Brevo key] To: {to_email} | Subject: {subject}")
         return
-    import httpx
     try:
         async with httpx.AsyncClient() as c:
             await c.post("https://api.brevo.com/v3/smtp/email",
@@ -123,6 +152,12 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+class GoogleAuthRequest(BaseModel):
+    credential: str
+
+class FacebookAuthRequest(BaseModel):
+    access_token: str
 
 class LineItem(BaseModel):
     description: str
@@ -243,6 +278,13 @@ async def startup():
     await db.invoices.create_index("client_id")
     await db.payment_transactions.create_index("session_id")
     await seed_admin()
+    app.state.auto_fix_task = asyncio.create_task(diagnostics.periodic_auto_fix_loop(db))
+
+@app.on_event("shutdown")
+async def shutdown():
+    task = getattr(app.state, "auto_fix_task", None)
+    if task:
+        task.cancel()
 
 async def seed_admin():
     existing = await db.users.find_one({"email": ADMIN_EMAIL})
@@ -279,7 +321,9 @@ async def register(body: RegisterRequest, response: Response):
 async def login(body: LoginRequest, response: Response):
     email = body.email.lower().strip()
     user = await db.users.find_one({"email": email}, {"_id": 0})
-    if not user or not verify_password(body.password, user.get("password_hash", "")):
+    if not user or not user.get("password_hash"):
+        raise HTTPException(401, "Email ou mot de passe incorrect")
+    if not verify_password(body.password, user["password_hash"]):
         raise HTTPException(401, "Email ou mot de passe incorrect")
     access = create_access_token(user["id"], email, user["role"])
     refresh = create_refresh_token(user["id"])
@@ -297,10 +341,86 @@ async def logout(response: Response):
 async def me(request: Request):
     return await get_current_user(request)
 
+@api_router.post("/auth/google")
+async def google_auth(body: GoogleAuthRequest, response: Response):
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(503, "Connexion Google non configurée")
+    try:
+        idinfo = await asyncio.to_thread(
+            google_id_token.verify_oauth2_token,
+            body.credential, google_auth_requests.Request(), GOOGLE_CLIENT_ID,
+        )
+    except ValueError:
+        raise HTTPException(401, "Jeton Google invalide")
+
+    email = (idinfo.get("email") or "").lower().strip()
+    if not email or not idinfo.get("email_verified"):
+        raise HTTPException(401, "Email Google non vérifié")
+
+    name = idinfo.get("name") or email.split("@")[0]
+    return await _oauth_login_or_create(email, name, "google_id", idinfo["sub"], response,
+                                          provider_label="Google")
+
+@api_router.post("/auth/facebook")
+async def facebook_auth(body: FacebookAuthRequest, response: Response):
+    if not FACEBOOK_APP_ID or not FACEBOOK_APP_SECRET:
+        raise HTTPException(503, "Connexion Facebook non configurée")
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            debug = await c.get("https://graph.facebook.com/debug_token", params={
+                "input_token": body.access_token,
+                "access_token": f"{FACEBOOK_APP_ID}|{FACEBOOK_APP_SECRET}",
+            })
+            debug.raise_for_status()
+            debug_data = debug.json().get("data", {})
+            if not debug_data.get("is_valid") or debug_data.get("app_id") != FACEBOOK_APP_ID:
+                raise HTTPException(401, "Jeton Facebook invalide")
+
+            profile = await c.get("https://graph.facebook.com/me", params={
+                "fields": "id,name,email",
+                "access_token": body.access_token,
+            })
+            profile.raise_for_status()
+            profile_data = profile.json()
+    except httpx.HTTPError:
+        raise HTTPException(401, "Jeton Facebook invalide")
+
+    # Facebook ne renvoie le champ email que si le compte a un email vérifié
+    email = (profile_data.get("email") or "").lower().strip()
+    if not email:
+        raise HTTPException(401, "Votre compte Facebook doit avoir un email vérifié pour continuer")
+
+    name = profile_data.get("name") or email.split("@")[0]
+    return await _oauth_login_or_create(email, name, "facebook_id", profile_data["id"], response,
+                                          provider_label="Facebook")
+
+async def _oauth_login_or_create(email: str, name: str, provider_id_field: str, provider_id: str,
+                                   response: Response, provider_label: str) -> dict:
+    existing = await db.users.find_one({"email": email}, {"_id": 0})
+    if existing and existing.get("role") == "admin":
+        raise HTTPException(403, f"La connexion {provider_label} n'est pas autorisée pour les administrateurs")
+
+    if existing:
+        uid, role, name = existing["id"], existing["role"], existing["name"]
+        if not existing.get(provider_id_field):
+            await db.users.update_one({"id": uid}, {"$set": {provider_id_field: provider_id}})
+    else:
+        uid, role = str(uuid.uuid4()), "client"
+        await db.users.insert_one({
+            "id": uid, "email": email, "password_hash": None,
+            provider_id_field: provider_id, "name": name, "phone": "",
+            "role": role, "created_at": datetime.now(timezone.utc).isoformat()
+        })
+
+    access = create_access_token(uid, email, role)
+    refresh = create_refresh_token(uid)
+    _set_cookies(response, access, refresh)
+    return {"id": uid, "email": email, "name": name, "role": role}
+
 def _set_cookies(response: Response, access: str, refresh: str):
-    response.set_cookie("access_token", access, httponly=True, secure=False,
+    response.set_cookie("access_token", access, httponly=True, secure=COOKIE_SECURE,
                         samesite="lax", max_age=86400, path="/")
-    response.set_cookie("refresh_token", refresh, httponly=True, secure=False,
+    response.set_cookie("refresh_token", refresh, httponly=True, secure=COOKIE_SECURE,
                         samesite="lax", max_age=604800, path="/")
 
 # ─── Client management (admin) ──────────────────────────────────────────────
@@ -309,6 +429,21 @@ async def list_clients(request: Request):
     await require_admin(request)
     clients = await db.users.find({"role": "client"}, {"_id": 0, "password_hash": 0}).to_list(1000)
     return clients
+
+# ─── Diagnostics (admin) ──────────────────────────────────────────────────────
+@api_router.get("/admin/diagnostics")
+async def get_diagnostics(request: Request):
+    await require_admin(request)
+    return await diagnostics.run_all_checks(
+        db=db, stripe_sdk=stripe_sdk, stripe_api_key=STRIPE_API_KEY,
+        stripe_webhook_secret=STRIPE_WEBHOOK_SECRET, brevo_api_key=BREVO_API_KEY,
+        uploads_dir=UPLOADS_DIR, google_client_id=GOOGLE_CLIENT_ID,
+    )
+
+@api_router.post("/admin/diagnostics/auto-fix")
+async def trigger_auto_fix(request: Request):
+    await require_admin(request)
+    return await diagnostics.run_auto_fixes(db)
 
 # ─── Quote Routes ────────────────────────────────────────────────────────────
 @api_router.get("/quotes")
@@ -583,29 +718,34 @@ async def create_checkout(body: CheckoutRequest, request: Request):
     if existing_tx:
         return {"checkout_url": existing_tx.get("checkout_url", ""), "session_id": existing_tx["session_id"]}
 
-    from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
-    stripe = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=f"{body.origin_url}/api/webhook/stripe")
     success_url = f"{body.origin_url}/espace-client?payment=success&session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{body.origin_url}/espace-client?payment=cancelled"
-    session = await stripe.create_checkout_session(CheckoutSessionRequest(
-        amount=float(tranche["amount"]),
-        currency="eur",
+    session = await stripe_sdk.checkout.Session.create_async(
+        mode="payment",
+        line_items=[{
+            "price_data": {
+                "currency": "eur",
+                "unit_amount": int(round(float(tranche["amount"]) * 100)),
+                "product_data": {"name": f"{inv['invoice_number']} — {tranche['label']}"},
+            },
+            "quantity": 1,
+        }],
         success_url=success_url,
         cancel_url=cancel_url,
         metadata={"invoice_id": body.invoice_id, "tranche_id": body.tranche_id,
                   "client_id": user["id"], "invoice_number": inv["invoice_number"],
                   "tranche_label": tranche["label"]}
-    ))
+    )
     tx_id = str(uuid.uuid4())
     await db.payment_transactions.insert_one({
         "id": tx_id, "invoice_id": body.invoice_id, "tranche_id": body.tranche_id,
         "invoice_number": inv["invoice_number"], "tranche_label": tranche["label"],
         "client_id": user["id"], "client_name": inv["client_name"],
         "amount": float(tranche["amount"]), "currency": "eur",
-        "session_id": session.session_id, "checkout_url": session.url,
+        "session_id": session.id, "checkout_url": session.url,
         "payment_status": "pending", "created_at": datetime.now(timezone.utc).isoformat()
     })
-    return {"checkout_url": session.url, "session_id": session.session_id}
+    return {"checkout_url": session.url, "session_id": session.id}
 
 @api_router.get("/payments/status/{session_id}")
 async def get_payment_status(session_id: str, request: Request):
@@ -616,17 +756,15 @@ async def get_payment_status(session_id: str, request: Request):
     if user["role"] == "client" and tx["client_id"] != user["id"]:
         raise HTTPException(403, "Accès refusé")
 
-    from emergentintegrations.payments.stripe.checkout import StripeCheckout
-    stripe = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url="")
-    status_resp = await stripe.get_checkout_status(session_id)
+    session = await stripe_sdk.checkout.Session.retrieve_async(session_id)
 
-    if status_resp.payment_status == "paid" and tx["payment_status"] != "paid":
+    if session.payment_status == "paid" and tx["payment_status"] != "paid":
         await db.payment_transactions.update_one({"session_id": session_id},
             {"$set": {"payment_status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}})
         await _mark_tranche_paid(tx["invoice_id"], tx["tranche_id"])
 
-    return {"status": status_resp.status, "payment_status": status_resp.payment_status,
-            "amount": status_resp.amount_total / 100, "session_id": session_id}
+    return {"status": session.status, "payment_status": session.payment_status,
+            "amount": (session.amount_total or 0) / 100, "session_id": session_id}
 
 @api_router.get("/payments")
 async def list_payments(request: Request):
@@ -637,18 +775,22 @@ async def list_payments(request: Request):
 
 @api_router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
-    from emergentintegrations.payments.stripe.checkout import StripeCheckout
-    stripe = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url="")
     body = await request.body()
     sig = request.headers.get("Stripe-Signature", "")
+    if not STRIPE_WEBHOOK_SECRET:
+        logger.error("STRIPE_WEBHOOK_SECRET non configuré — webhook ignoré (payload non vérifié)")
+        return {"received": True}
     try:
-        event = await stripe.handle_webhook(body, sig)
-        if event.payment_status == "paid":
-            tx = await db.payment_transactions.find_one({"session_id": event.session_id})
-            if tx and tx.get("payment_status") != "paid":
-                await db.payment_transactions.update_one({"session_id": event.session_id},
-                    {"$set": {"payment_status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}})
-                await _mark_tranche_paid(tx["invoice_id"], tx["tranche_id"])
+        event = stripe_sdk.Webhook.construct_event(body, sig, STRIPE_WEBHOOK_SECRET)
+        if event.type == "checkout.session.completed":
+            session = event.data.object
+            if session.get("payment_status") == "paid":
+                session_id = session["id"]
+                tx = await db.payment_transactions.find_one({"session_id": session_id})
+                if tx and tx.get("payment_status") != "paid":
+                    await db.payment_transactions.update_one({"session_id": session_id},
+                        {"$set": {"payment_status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}})
+                    await _mark_tranche_paid(tx["invoice_id"], tx["tranche_id"])
     except Exception as e:
         logger.error(f"Webhook error: {e}")
     return {"received": True}

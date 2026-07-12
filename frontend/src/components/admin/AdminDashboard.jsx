@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Users, FileText, Receipt, CreditCard, Plus, LogOut, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Eye, Send, RefreshCw, TrendingUp, Inbox, Image, MessageSquare, Trash2, Upload } from "lucide-react";
+import { Users, FileText, Receipt, CreditCard, Plus, LogOut, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Eye, Send, RefreshCw, TrendingUp, Inbox, Image, MessageSquare, Trash2, Upload, Activity } from "lucide-react";
 import QuoteForm from "@/components/admin/QuoteForm";
 import InvoiceDetail from "@/components/admin/InvoiceDetail";
+import DiagnosticsPanel from "@/components/admin/DiagnosticsPanel";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ax = () => axios.create({ withCredentials: true });
@@ -474,6 +475,7 @@ export default function AdminDashboard() {
     { id: "quotes", label: "Devis", icon: FileText },
     { id: "invoices", label: "Factures", icon: Receipt },
     { id: "payments", label: "Paiements", icon: CreditCard },
+    { id: "diagnostics", label: "Diagnostic", icon: Activity },
   ];
 
   return (
@@ -944,6 +946,8 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {tab === "diagnostics" && <DiagnosticsPanel />}
       </main>
     </div>
   );
