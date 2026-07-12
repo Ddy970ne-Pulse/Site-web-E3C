@@ -1,0 +1,1266 @@
+openapi: "3.1.0"
+info:
+  title: E3C API
+  version: "1.0.0"
+  description: >
+    E3C Constructions — quotes, invoices, payments, gallery, testimonials and
+    pricing-grid management. v1 supersedes the legacy unversioned `/api/*`
+    surface: it adds cursor pagination on all collections, RFC 7807 error
+    responses, typed request bodies throughout, and consolidates the four
+    quote verb-endpoints (`/send` `/accept` `/refuse` `/convert`) into a
+    single state-transition endpoint.
+  contact:
+    name: E3C Constructions
+    email: contact@e3c-construction.com
+  license:
+    name: Proprietary
+    identifier: "LicenseRef-Proprietary"
+servers:
+  - url: /api/v1
+    description: Current version
+  - url: /api
+    description: Legacy (unversioned, unpaginated, deprecated — do not build new clients against this)
+
+tags:
+  - name: Auth
+    description: Registration, login/logout, and session introspection
+  - name: Users
+    description: Admin-facing client/user directory
+  - name: Quotes
+    description: Draft → sent → accepted/refused → converted quote lifecycle
+  - name: Invoices
+    description: Invoices generated from accepted quotes or converted quote requests
+  - name: Payments
+    description: Stripe checkout sessions, transaction history, and webhook receiver
+  - name: QuoteRequests
+    description: Public-facing quote intake form and its admin conversion workflow
+  - name: Gallery
+    description: Public project photo gallery, admin-managed
+  - name: Testimonials
+    description: Client testimonials with an admin moderation queue
+  - name: PricingGrid
+    description: Public unit-price catalog used to estimate quotes
+  - name: Contact
+    description: Public contact form
+
+paths:
+  # ── Auth ──────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: register
+      tags: [Auth]
+      summary: Create a client account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "201":
+          description: Account created; session cookies set
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [Auth]
+      summary: Authenticate and receive session cookies
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [Auth]
+      summary: Clear session cookies
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [Auth]
+      summary: Get the authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ── Users (formerly /clients) ────────────────────────────────────────
+  /users:
+    get:
+      operationId: listUsers
+      tags: [Users]
+      summary: List users (admin only)
+      description: Replaces legacy `GET /clients`. Role filtering moved from the implicit endpoint name to a query parameter.
+      parameters:
+        - name: role
+          in: query
+          schema: { type: string, enum: [client, admin] }
+          description: Defaults to `client` if omitted, matching legacy `/clients` behavior.
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated users
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserPage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /users/{user_id}:
+    get:
+      operationId: getUser
+      tags: [Users]
+      summary: Get a user (admin only)
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── Quotes ────────────────────────────────────────────────────────────
+  /quotes:
+    get:
+      operationId: listQuotes
+      tags: [Quotes]
+      summary: List quotes (admin sees all, client sees own)
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/QuoteStatus" }
+      responses:
+        "200":
+          description: Paginated quotes
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuotePage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: createQuote
+      tags: [Quotes]
+      summary: Create a draft quote (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuoteCreate" }
+      responses:
+        "201":
+          description: Draft quote created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Quote" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /quotes/{quote_id}:
+    get:
+      operationId: getQuote
+      tags: [Quotes]
+      summary: Get a quote
+      parameters: [{ $ref: "#/components/parameters/QuoteId" }]
+      responses:
+        "200":
+          description: Quote
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Quote" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: updateQuote
+      tags: [Quotes]
+      summary: Update a draft quote (admin only)
+      parameters: [{ $ref: "#/components/parameters/QuoteId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuoteUpdate" }
+      responses:
+        "200":
+          description: Updated quote
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Quote" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /quotes/{quote_id}/status:
+    post:
+      operationId: transitionQuoteStatus
+      tags: [Quotes]
+      summary: Transition a quote's status
+      description: >
+        Replaces the legacy `POST /quotes/{id}/send`, `/accept`, `/refuse`,
+        `/convert` endpoints with one state-transition action. Valid actions
+        depend on current status: `send` (draft→sent, admin only), `accept`
+        (sent→accepted), `refuse` (sent→refused), `convert` (accepted→converted
+        + creates an invoice, admin only).
+      parameters: [{ $ref: "#/components/parameters/QuoteId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuoteStatusTransition" }
+      responses:
+        "200":
+          description: New quote state (or the created invoice, for `convert`)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Quote"
+                  - $ref: "#/components/schemas/Invoice"
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Action not valid for the quote's current status
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /quotes/{quote_id}/pdf:
+    get:
+      operationId: downloadQuotePdf
+      tags: [Quotes]
+      summary: Download the quote as a PDF
+      parameters: [{ $ref: "#/components/parameters/QuoteId" }]
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── Invoices ──────────────────────────────────────────────────────────
+  /invoices:
+    get:
+      operationId: listInvoices
+      tags: [Invoices]
+      summary: List invoices (admin sees all, client sees own)
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/InvoiceStatus" }
+      responses:
+        "200":
+          description: Paginated invoices
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvoicePage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /invoices/{invoice_id}:
+    get:
+      operationId: getInvoice
+      tags: [Invoices]
+      summary: Get an invoice
+      parameters: [{ $ref: "#/components/parameters/InvoiceId" }]
+      responses:
+        "200":
+          description: Invoice
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Invoice" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /invoices/{invoice_id}/tranches:
+    put:
+      operationId: setInvoiceTranches
+      tags: [Invoices]
+      summary: Set the payment installment schedule (admin only)
+      parameters: [{ $ref: "#/components/parameters/InvoiceId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvoiceTranchesUpdate" }
+      responses:
+        "200":
+          description: Updated invoice
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Invoice" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Tranche total does not match the invoice's total TTC
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /invoices/{invoice_id}/pdf:
+    get:
+      operationId: downloadInvoicePdf
+      tags: [Invoices]
+      summary: Download the invoice as a PDF
+      parameters: [{ $ref: "#/components/parameters/InvoiceId" }]
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── Payments ──────────────────────────────────────────────────────────
+  /checkout-sessions:
+    post:
+      operationId: createCheckoutSession
+      tags: [Payments]
+      summary: Create a Stripe checkout session for one invoice tranche
+      description: Replaces legacy `POST /payments/checkout`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CheckoutSessionCreate" }
+      responses:
+        "201":
+          description: Checkout session created (or an existing pending one, reused)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckoutSession" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Tranche already paid
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /checkout-sessions/{session_id}:
+    get:
+      operationId: getCheckoutSession
+      tags: [Payments]
+      summary: Get checkout session status, syncing with Stripe if still pending
+      description: Replaces legacy `GET /payments/status/{session_id}`.
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Checkout session status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckoutSession" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /payments:
+    get:
+      operationId: listPayments
+      tags: [Payments]
+      summary: List payment transactions (admin sees all, client sees own)
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated payment transactions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentTransactionPage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /webhook/stripe:
+    post:
+      operationId: stripeWebhook
+      tags: [Payments]
+      summary: Stripe webhook receiver
+      security:
+        - StripeSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "200":
+          description: Event acknowledged (always 200, per Stripe's retry contract)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received: { type: boolean }
+
+  # ── Quote Requests (public intake) ───────────────────────────────────
+  /quote-requests:
+    get:
+      operationId: listQuoteRequests
+      tags: [QuoteRequests]
+      summary: List quote requests (admin only)
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/QuoteRequestStatus" }
+      responses:
+        "200":
+          description: Paginated quote requests
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuoteRequestPage" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createQuoteRequest
+      tags: [QuoteRequests]
+      summary: Submit a public quote request
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuoteRequestCreate" }
+      responses:
+        "201":
+          description: Quote request received
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuoteRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /quote-requests/{req_id}/status:
+    put:
+      operationId: updateQuoteRequestStatus
+      tags: [QuoteRequests]
+      summary: Update a quote request's status (admin only)
+      parameters:
+        - name: req_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: "#/components/schemas/QuoteRequestStatus" }
+      responses:
+        "200":
+          description: Updated quote request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuoteRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /quote-requests/{req_id}/to-invoice:
+    post:
+      operationId: convertQuoteRequestToInvoice
+      tags: [QuoteRequests]
+      summary: Convert a quote request directly into an invoice (admin only)
+      parameters:
+        - name: req_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Invoice created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Invoice" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Quote request already converted
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  # ── Gallery ───────────────────────────────────────────────────────────
+  /gallery:
+    get:
+      operationId: listGalleryImages
+      tags: [Gallery]
+      summary: List published gallery images
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: category
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Paginated gallery images
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GalleryImagePage" }
+    post:
+      operationId: uploadGalleryImage
+      tags: [Gallery]
+      summary: Upload a gallery image (admin only)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, label, category]
+              properties:
+                file: { type: string, format: binary }
+                label: { type: string }
+                category:
+                  type: string
+                  enum: [Maçonnerie, Toiture, Rénovation, Peinture, Carrelage]
+      responses:
+        "201":
+          description: Image uploaded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GalleryImage" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: Unsupported format or file too large (max 10 MB; JPEG/PNG/WEBP only)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /gallery/{img_id}:
+    delete:
+      operationId: deleteGalleryImage
+      tags: [Gallery]
+      summary: Delete a gallery image (admin only)
+      parameters:
+        - name: img_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── Testimonials ──────────────────────────────────────────────────────
+  /testimonials:
+    get:
+      operationId: listTestimonials
+      tags: [Testimonials]
+      summary: List testimonials
+      description: >
+        Replaces legacy `GET /testimonials/admin`. Public callers always get
+        `status=approved`; admins may pass any `status` value (or omit it for all).
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: status
+          in: query
+          description: Admin-only filter. Ignored (forced to `approved`) for unauthenticated callers.
+          schema: { $ref: "#/components/schemas/TestimonialStatus" }
+      responses:
+        "200":
+          description: Paginated testimonials
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TestimonialPage" }
+    post:
+      operationId: submitTestimonial
+      tags: [Testimonials]
+      summary: Submit a testimonial for moderation
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TestimonialCreate" }
+      responses:
+        "201":
+          description: Testimonial queued for moderation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Testimonial" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /testimonials/{t_id}:
+    patch:
+      operationId: moderateTestimonial
+      tags: [Testimonials]
+      summary: Approve, reject, or reset a testimonial (admin only)
+      parameters:
+        - name: t_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: "#/components/schemas/TestimonialStatus" }
+      responses:
+        "200":
+          description: Updated testimonial
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Testimonial" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  # ── Pricing Grid ──────────────────────────────────────────────────────
+  /pricing-grid:
+    get:
+      operationId: listPricingItems
+      tags: [PricingGrid]
+      summary: List pricing grid items
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: category
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Paginated pricing items
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PricingItemPage" }
+    post:
+      operationId: createPricingItem
+      tags: [PricingGrid]
+      summary: Create a pricing item (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PricingItemCreate" }
+      responses:
+        "201":
+          description: Pricing item created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PricingItem" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /pricing-grid/{item_id}:
+    put:
+      operationId: updatePricingItem
+      tags: [PricingGrid]
+      summary: Update a pricing item (admin only)
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PricingItemUpdate" }
+      responses:
+        "200":
+          description: Updated pricing item
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PricingItem" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: deletePricingItem
+      tags: [PricingGrid]
+      summary: Delete a pricing item (admin only)
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── Contact ───────────────────────────────────────────────────────────
+  /contact:
+    post:
+      operationId: submitContact
+      tags: [Contact]
+      summary: Submit the public contact form
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContactForm" }
+      responses:
+        "201":
+          description: Message received
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Contact" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+components:
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+      description: Opaque pagination cursor from a previous response's `pagination.next_cursor`.
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, default: 20, maximum: 100 }
+    QuoteId:
+      name: quote_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    InvoiceId:
+      name: invoice_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    # ── Enums ──
+    QuoteStatus: { type: string, enum: [draft, sent, accepted, refused, converted] }
+    InvoiceStatus: { type: string, enum: [pending, partial, paid] }
+    TrancheStatus: { type: string, enum: [pending, paid] }
+    TestimonialStatus: { type: string, enum: [pending, approved, rejected] }
+    QuoteRequestStatus: { type: string, enum: [new, viewed, converted] }
+    PaymentStatus: { type: string, enum: [pending, paid] }
+
+    # ── Auth / Users ──
+    RegisterRequest:
+      type: object
+      required: [email, password, name]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        name: { type: string }
+        phone: { type: string, default: "" }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+
+    User:
+      type: object
+      required: [id, email, name, role, created_at]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        email: { type: string, format: email }
+        name: { type: string }
+        phone: { type: string }
+        role: { type: string, enum: [client, admin] }
+        created_at: { type: string, format: date-time, readOnly: true }
+      example:
+        id: "9c9f6f2e-1b3a-4b7a-9c3e-8b1a2f3d4e5f"
+        email: "jean.dupont@example.com"
+        name: "Jean Dupont"
+        phone: "0690 12 34 56"
+        role: client
+        created_at: "2026-07-01T10:00:00Z"
+
+    UserPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/User" } }
+        pagination: { $ref: "#/components/schemas/CursorPage" }
+
+    # ── Quotes ──
+    LineItem:
+      type: object
+      required: [description, quantity, unit_price]
+      properties:
+        description: { type: string }
+        quantity: { type: number }
+        unit_price: { type: number }
+        tva_rate: { type: number, default: 8.5 }
+        total_ht: { type: number, readOnly: true }
+        total_tva: { type: number, readOnly: true }
+        total_ttc: { type: number, readOnly: true }
+
+    QuoteCreate:
+      type: object
+      required: [client_id, project_description, line_items, valid_until]
+      properties:
+        client_id: { type: string, format: uuid }
+        project_description: { type: string }
+        line_items: { type: array, items: { $ref: "#/components/schemas/LineItem" }, minItems: 1 }
+        valid_until: { type: string, format: date }
+        notes: { type: string, default: "" }
+        client_address: { type: string, default: "" }
+
+    QuoteUpdate:
+      type: object
+      properties:
+        project_description: { type: string }
+        line_items: { type: array, items: { $ref: "#/components/schemas/LineItem" } }
+        valid_until: { type: string, format: date }
+        notes: { type: string }
+        client_address: { type: string }
+        admin_notes: { type: string }
+
+    QuoteStatusTransition:
+      type: object
+      required: [action]
+      properties:
+        action: { type: string, enum: [send, accept, refuse, convert] }
+        reason:
+          type: string
+          description: Required when `action` is `refuse`.
+
+    Quote:
+      type: object
+      required: [id, quote_number, client_id, status, total_ht, total_tva, total_ttc, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        quote_number: { type: string, readOnly: true, example: "DEV-2026-014" }
+        client_id: { type: string, format: uuid }
+        client_name: { type: string, readOnly: true }
+        client_email: { type: string, format: email, readOnly: true }
+        client_phone: { type: string, readOnly: true }
+        client_address: { type: string }
+        project_description: { type: string }
+        line_items: { type: array, items: { $ref: "#/components/schemas/LineItem" } }
+        total_ht: { type: number, readOnly: true }
+        total_tva: { type: number, readOnly: true }
+        total_ttc: { type: number, readOnly: true }
+        status: { $ref: "#/components/schemas/QuoteStatus" }
+        valid_until: { type: string, format: date }
+        notes: { type: string }
+        admin_notes: { type: string }
+        signed_at: { type: [string, "null"], format: date-time, readOnly: true }
+        signed_by: { type: [string, "null"], readOnly: true }
+        refusal_reason: { type: [string, "null"] }
+        invoice_id: { type: [string, "null"], format: uuid, readOnly: true }
+        created_at: { type: string, format: date-time, readOnly: true }
+        updated_at: { type: string, format: date-time, readOnly: true }
+
+    QuotePage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Quote" } }
+        pagination: { $ref: "#/components/schemas/CursorPage" }
+
+    # ── Invoices ──
+    PaymentTranche:
+      type: object
+      required: [id, label, amount, due_date, status]
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string }
+        amount: { type: number }
+        due_date: { type: string, format: date }
+        status: { $ref: "#/components/schemas/TrancheStatus" }
+        paid_at: { type: [string, "null"], format: date-time, readOnly: true }
+        stripe_session_id: { type: [string, "null"], readOnly: true }
+
+    InvoiceTranchesUpdate:
+      type: object
+      required: [tranches]
+      properties:
+        tranches:
+          type: array
+          items: { $ref: "#/components/schemas/PaymentTranche" }
+          minItems: 1
+          description: Amounts must sum to the invoice's total_ttc (±0.01€).
+
+    Invoice:
+      type: object
+      required: [id, invoice_number, client_id, status, total_ht, total_tva, total_ttc, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        invoice_number: { type: string, readOnly: true, example: "FAC-2026-009" }
+        quote_id: { type: [string, "null"], format: uuid, readOnly: true }
+        quote_number: { type: [string, "null"], readOnly: true }
+        quote_request_id: { type: [string, "null"], format: uuid, readOnly: true }
+        client_id: { type: [string, "null"], format: uuid }
+        client_name: { type: string, readOnly: true }
+        client_email: { type: string, format: email, readOnly: true }
+        client_phone: { type: string, readOnly: true }
+        client_address: { type: string }
+        project_description: { type: string }
+        line_items: { type: array, items: { $ref: "#/components/schemas/LineItem" } }
+        total_ht: { type: number, readOnly: true }
+        total_tva: { type: number, readOnly: true }
+        total_ttc: { type: number, readOnly: true }
+        status: { $ref: "#/components/schemas/InvoiceStatus" }
+        payment_tranches: { type: array, items: { $ref: "#/components/schemas/PaymentTranche" } }
+        created_at: { type: string, format: date-time, readOnly: true }
+        updated_at: { type: string, format: date-time, readOnly: true }
+
+    InvoicePage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Invoice" } }
+        pagination: { $ref: "#/components/schemas/CursorPage" }
+
+    # ── Payments ──
+    CheckoutSessionCreate:
+      type: object
+      required: [invoice_id, tranche_id, origin_url]
+      properties:
+        invoice_id: { type: string, format: uuid }
+        tranche_id: { type: string, format: uuid }
+        origin_url: { type: string, format: uri, description: "Frontend origin, used to build Stripe success/cancel URLs." }
+
+    CheckoutSession:
+      type: object
+      required: [session_id, checkout_url, payment_status]
+      properties:
+        session_id: { type: string, readOnly: true }
+        checkout_url: { type: string, format: uri, readOnly: true }
+        status: { type: string, readOnly: true }
+        payment_status: { $ref: "#/components/schemas/PaymentStatus" }
+        amount: { type: number, readOnly: true }
+
+    PaymentTransaction:
+      type: object
+      required: [id, invoice_id, tranche_id, amount, currency, session_id, payment_status, created_at]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        invoice_id: { type: string, format: uuid }
+        tranche_id: { type: string, format: uuid }
+        invoice_number: { type: string, readOnly: true }
+        tranche_label: { type: string, readOnly: true }
+        client_id: { type: string, format: uuid, readOnly: true }
+        client_name: { type: string, readOnly: true }
+        amount: { type: number }
+        currency: { type: string, example: eur }
+        session_id: { type: string, readOnly: true }
+        checkout_url: { type: string, format: uri, readOnly: true }
+        payment_status: { $ref: "#/components/schemas/PaymentStatus" }
+        created_at: { type: string, format: date-time, readOnly: true }
+        paid_at: { type: [string, "null"], format: date-time, readOnly: true }
+
+    PaymentTransactionPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/PaymentTransaction" } }
+        pagination: { $ref: "#/components/schemas/CursorPage" }
+
+    # ── Quote Requests ──
+    QuoteLineItem:
+      type: object
+      required: [description, unit, unit_price_ht, quantity]
+      properties:
+        pricing_item_id: { type: [string, "null"] }
+        description: { type: string }
+        unit: { type: string, example: "m²" }
+        unit_price_ht: { type: number }
+        tva_rate: { type: number, default: 8.5 }
+        quantity: { type: number }
+
+    QuoteRequestCreate:
+      type: object
+      required: [project_type, services, description, commune, name, email]
+      properties:
+        project_type: { type: string }
+        services: { type: array, items: { type: string } }
+        description: { type: string }
+        surface: { type: string, default: "" }
+        commune: { type: string }
+        address: { type: string, default: "" }
+        budget_range: { type: string, default: "" }
+        desired_delay: { type: string, default: "" }
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string, default: "" }
+        line_items: { type: array, items: { $ref: "#/components/schemas/QuoteLineItem" }, default: [] }
+        estimated_total_ht: { type: number, default: 0 }
+        estimated_total_ttc: { type: number, default: 0 }
+
+    QuoteRequest:
+      type: object
+      required: [id, project_type, name, email, status, created_at]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        project_type: { type: string }
+        services: { type: array, items: { type: string } }
+        description: { type: string }
+        surface: { type: string }
+        commune: { type: string }
+        address: { type: string }
+        budget_range: { type: string }
+        desired_delay: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        client_id: { type: [string, "null"], format: uuid, readOnly: true }
+        line_items: { type: array, items: { $ref: "#/components/schemas/QuoteLineItem" } }
+        estimated_total_ht: { type: number }
+        estimated_total_ttc: { type: number }
+        status: { $ref: "#/components/schemas/QuoteRequestStatus" }
+        invoice_id: { type: [string, "null"], format: uuid, readOnly: true }
+        created_at: { type: string, format: date-time, readOnly: true }
+
+    QuoteRequestPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/QuoteRequest" } }
+        pagination: { $ref: "#/components/schemas/CursorPage" }
+
+    # ── Gallery ──
+    GalleryImage:
+      type: object
+      required: [id, filename, url, label, category, created_at]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        filename: { type: string, readOnly: true }
+        url: { type: string, readOnly: true }
+        label: { type: string }
+        category: { type: string, enum: [Maçonnerie, Toiture, Rénovation, Peinture, Carrelage] }
+        created_at: { type: string, format: date-time, readOnly: true }
+
+    GalleryImagePage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/GalleryImage" } }
+        pagination: { $ref: "#/components/schemas/CursorPage" }
+
+    # ── Testimonials ──
+    TestimonialCreate:
+      type: object
+      required: [name, text]
+      properties:
+        name: { type: string }
+        commune: { type: string, default: "" }
+        service: { type: string, default: "" }
+        stars: { type: integer, minimum: 1, maximum: 5, default: 5 }
+        text: { type: string, minLength: 1 }
+        email: { type: string, format: email, default: "" }
+
+    Testimonial:
+      type: object
+      required: [id, name, stars, text, status, created_at]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        name: { type: string }
+        commune: { type: string }
+        service: { type: string }
+        stars: { type: integer, minimum: 1, maximum: 5 }
+        text: { type: string }
+        email: { type: string, format: email }
+        status: { $ref: "#/components/schemas/TestimonialStatus" }
+        initials: { type: string, readOnly: true }
+        created_at: { type: string, format: date-time, readOnly: true }
+
+    TestimonialPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Testimonial" } }
+        pagination: { $ref: "#/components/schemas/CursorPage" }
+
+    # ── Pricing Grid ──
+    PricingItemCreate:
+      type: object
+      required: [category, description, unit, unit_price_ht]
+      properties:
+        category: { type: string }
+        description: { type: string }
+        unit: { type: string, example: "m²" }
+        unit_price_ht: { type: number, minimum: 0 }
+        tva_rate: { type: number, default: 8.5 }
+        active: { type: boolean, default: true }
+
+    PricingItemUpdate:
+      type: object
+      properties:
+        category: { type: string }
+        description: { type: string }
+        unit: { type: string }
+        unit_price_ht: { type: number, minimum: 0 }
+        tva_rate: { type: number }
+        active: { type: boolean }
+
+    PricingItem:
+      allOf:
+        - $ref: "#/components/schemas/PricingItemCreate"
+        - type: object
+          required: [id, created_at]
+          properties:
+            id: { type: string, format: uuid, readOnly: true }
+            created_at: { type: string, format: date-time, readOnly: true }
+
+    PricingItemPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/PricingItem" } }
+        pagination: { $ref: "#/components/schemas/CursorPage" }
+
+    # ── Contact ──
+    ContactForm:
+      type: object
+      required: [name, phone, commune, service]
+      properties:
+        name: { type: string }
+        phone: { type: string }
+        commune: { type: string }
+        service: { type: string }
+        message: { type: string, default: "" }
+
+    Contact:
+      allOf:
+        - $ref: "#/components/schemas/ContactForm"
+        - type: object
+          required: [id, submitted_at]
+          properties:
+            id: { type: string, format: uuid, readOnly: true }
+            submitted_at: { type: string, format: date-time, readOnly: true }
+
+    # ── Shared ──
+    CursorPage:
+      type: object
+      required: [next_cursor, has_more]
+      properties:
+        next_cursor: { type: [string, "null"] }
+        has_more: { type: boolean }
+
+    Problem:
+      type: object
+      required: [type, title, status]
+      description: RFC 7807 Problem Details. `type` is a stable, documented URI — never a generic string.
+      properties:
+        type: { type: string, format: uri, example: "https://e3c-construction.com/errors/not-found" }
+        title: { type: string, example: "Not Found" }
+        status: { type: integer, example: 404 }
+        detail: { type: string, example: "Devis introuvable." }
+        instance: { type: string, format: uri }
+        errors:
+          type: array
+          description: Field-level validation failures, present on 422 responses.
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid session
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+          example: { type: "https://e3c-construction.com/errors/unauthorized", title: "Unauthorized", status: 401, detail: "Non authentifié." }
+    Forbidden:
+      description: Authenticated but not permitted
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+          example: { type: "https://e3c-construction.com/errors/forbidden", title: "Forbidden", status: 403, detail: "Accès refusé." }
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Conflict:
+      description: Request conflicts with current resource state
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    ValidationError:
+      description: Request body failed validation
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        Retry-After: { schema: { type: integer } }
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+
+  securitySchemes:
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: >
+        httpOnly session cookie set by /auth/login and /auth/register.
+        NOTE: current implementation sets `secure=False` unconditionally
+        (backend/server.py:301) — must be `secure=True` behind HTTPS in production.
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Alternative to CookieAuth; same access token passed as `Authorization: Bearer <token>`."
+    StripeSignature:
+      type: apiKey
+      in: header
+      name: Stripe-Signature
+
+security:
+  - CookieAuth: []
+  - BearerAuth: []
