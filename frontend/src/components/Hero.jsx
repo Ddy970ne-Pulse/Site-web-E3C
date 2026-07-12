@@ -1,7 +1,8 @@
 import { ChevronDown, Shield, Star, Clock, FileEdit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-const HERO_BG = "https://static.prod-images.emergentagent.com/jobs/bed7ba01-3d73-4dbb-bf1f-2181e68e96b9/images/8ecb7ed7162572a62486742411ec38a5f21fe215e7d0a88b0123c3723ce818d3.png";
+import { useTheme } from "@/contexts/ThemeContext";
+import heroNight from "@/assets/hero-night.jpg";
+import heroDay from "@/assets/hero-day.jpg";
 
 const WHATSAPP_SVG = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -11,6 +12,7 @@ const WHATSAPP_SVG = () => (
 
 export default function Hero({ whatsapp }) {
   const navigate = useNavigate();
+  const { isDark } = useTheme();
 
   return (
     <section
@@ -18,10 +20,11 @@ export default function Hero({ whatsapp }) {
       data-testid="hero-section"
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
     >
-      {/* Background Image */}
+      {/* Background Image — sombre (crépuscule) en mode nuit, éclairée en mode jour */}
       <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${HERO_BG})` }}
+        data-testid="hero-bg"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-[background-image] duration-500"
+        style={{ backgroundImage: `url(${isDark ? heroNight : heroDay})` }}
       />
       {/* Dark Overlay */}
       <div className="absolute inset-0 hero-overlay" />

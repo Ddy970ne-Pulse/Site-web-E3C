@@ -183,6 +183,17 @@ input:focus, textarea:focus, select:focus {
   );
 }
 
+/* Mode jour : overlay bien plus léger pour laisser voir le ciel bleu et la lumière
+   de la photo éclaircie — l'overlay sombre ci-dessus l'écrasait complètement. */
+html:not(.dark) .hero-overlay {
+  background: linear-gradient(
+    135deg,
+    rgba(10, 10, 10, 0.5) 0%,
+    rgba(10, 10, 10, 0.25) 50%,
+    rgba(10, 10, 10, 0.4) 100%
+  );
+}
+
 /* Stat counter */
 .stat-number {
   font-family: 'Outfit', sans-serif;
