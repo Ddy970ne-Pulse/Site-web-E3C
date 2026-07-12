@@ -1,7 +1,5 @@
 import { useEffect, useRef } from "react";
 
-const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-
 let gsiScriptPromise = null;
 function loadGsiScript() {
   if (gsiScriptPromise) return gsiScriptPromise;
@@ -18,18 +16,18 @@ function loadGsiScript() {
   return gsiScriptPromise;
 }
 
-export default function GoogleSignInButton({ onSuccess, onError }) {
+export default function GoogleSignInButton({ clientId, onSuccess, onError }) {
   const buttonRef = useRef(null);
 
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !buttonRef.current) return;
+    if (!clientId || !buttonRef.current) return;
     let cancelled = false;
 
     loadGsiScript()
       .then(() => {
         if (cancelled || !buttonRef.current) return;
         window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
+          client_id: clientId,
           callback: (response) => {
             if (response.credential) onSuccess(response.credential);
             else onError?.(new Error("Aucun jeton Google reçu"));
@@ -48,9 +46,9 @@ export default function GoogleSignInButton({ onSuccess, onError }) {
       .catch((err) => onError?.(err));
 
     return () => { cancelled = true; };
-  }, [onSuccess, onError]);
+  }, [clientId, onSuccess, onError]);
 
-  if (!GOOGLE_CLIENT_ID) return null;
+  if (!clientId) return null;
 
   return <div ref={buttonRef} data-testid="google-signin-button" className="flex justify-center" />;
 }

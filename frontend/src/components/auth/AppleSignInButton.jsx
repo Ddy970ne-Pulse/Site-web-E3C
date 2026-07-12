@@ -1,9 +1,7 @@
 import { useState, useCallback } from "react";
 
-const APPLE_CLIENT_ID = process.env.REACT_APP_APPLE_CLIENT_ID;
-
 let appleSdkPromise = null;
-function loadAppleSdk() {
+function loadAppleSdk(clientId) {
   if (appleSdkPromise) return appleSdkPromise;
   appleSdkPromise = new Promise((resolve, reject) => {
     if (window.AppleID) return resolve(window.AppleID);
@@ -13,7 +11,7 @@ function loadAppleSdk() {
     script.defer = true;
     script.onload = () => {
       window.AppleID.auth.init({
-        clientId: APPLE_CLIENT_ID,
+        clientId,
         scope: "name email",
         redirectURI: window.location.origin,
         usePopup: true,
@@ -26,13 +24,13 @@ function loadAppleSdk() {
   return appleSdkPromise;
 }
 
-export default function AppleSignInButton({ onSuccess, onError }) {
+export default function AppleSignInButton({ clientId, onSuccess, onError }) {
   const [loading, setLoading] = useState(false);
 
   const handleClick = useCallback(async () => {
     setLoading(true);
     try {
-      const AppleID = await loadAppleSdk();
+      const AppleID = await loadAppleSdk(clientId);
       const res = await AppleID.auth.signIn();
       const idToken = res?.authorization?.id_token;
       if (!idToken) throw new Error("Aucun jeton Apple reçu");
@@ -47,9 +45,9 @@ export default function AppleSignInButton({ onSuccess, onError }) {
     } finally {
       setLoading(false);
     }
-  }, [onSuccess, onError]);
+  }, [clientId, onSuccess, onError]);
 
-  if (!APPLE_CLIENT_ID) return null;
+  if (!clientId) return null;
 
   return (
     <button type="button" onClick={handleClick} disabled={loading}

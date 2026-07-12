@@ -6,13 +6,9 @@ import GoogleSignInButton from "./GoogleSignInButton";
 import FacebookSignInButton from "./FacebookSignInButton";
 import AppleSignInButton from "./AppleSignInButton";
 
-const GOOGLE_AUTH_ENABLED = Boolean(process.env.REACT_APP_GOOGLE_CLIENT_ID);
-const FACEBOOK_AUTH_ENABLED = Boolean(process.env.REACT_APP_FACEBOOK_APP_ID);
-const APPLE_AUTH_ENABLED = Boolean(process.env.REACT_APP_APPLE_CLIENT_ID);
-const SOCIAL_AUTH_ENABLED = GOOGLE_AUTH_ENABLED || FACEBOOK_AUTH_ENABLED || APPLE_AUTH_ENABLED;
-
 export default function Register() {
-  const { register, googleLogin, facebookLogin, appleLogin } = useAuth();
+  const { register, googleLogin, facebookLogin, appleLogin, providers } = useAuth();
+  const socialAuthEnabled = Boolean(providers.google_client_id || providers.facebook_app_id || providers.apple_client_id);
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "", name: "", phone: "" });
   const [error, setError] = useState("");
@@ -68,21 +64,24 @@ export default function Register() {
               {error}
             </div>
           )}
-          {SOCIAL_AUTH_ENABLED && (
+          {socialAuthEnabled && (
             <>
               <div className="space-y-3">
-                {GOOGLE_AUTH_ENABLED && (
+                {providers.google_client_id && (
                   <GoogleSignInButton
+                    clientId={providers.google_client_id}
                     onSuccess={handleSocialAuth(googleLogin, "Google")}
                     onError={handleSocialError("Google")} />
                 )}
-                {FACEBOOK_AUTH_ENABLED && (
+                {providers.facebook_app_id && (
                   <FacebookSignInButton
+                    appId={providers.facebook_app_id}
                     onSuccess={handleSocialAuth(facebookLogin, "Facebook")}
                     onError={handleSocialError("Facebook")} />
                 )}
-                {APPLE_AUTH_ENABLED && (
+                {providers.apple_client_id && (
                   <AppleSignInButton
+                    clientId={providers.apple_client_id}
                     onSuccess={handleSocialAuth(appleLogin, "Apple")}
                     onError={handleSocialError("Apple")} />
                 )}

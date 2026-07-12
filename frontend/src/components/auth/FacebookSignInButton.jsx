@@ -1,14 +1,12 @@
 import { useState, useCallback } from "react";
 
-const FACEBOOK_APP_ID = process.env.REACT_APP_FACEBOOK_APP_ID;
-
 let fbSdkPromise = null;
-function loadFacebookSdk() {
+function loadFacebookSdk(appId) {
   if (fbSdkPromise) return fbSdkPromise;
   fbSdkPromise = new Promise((resolve, reject) => {
     if (window.FB) return resolve(window.FB);
     window.fbAsyncInit = function () {
-      window.FB.init({ appId: FACEBOOK_APP_ID, cookie: true, xfbml: false, version: "v21.0" });
+      window.FB.init({ appId, cookie: true, xfbml: false, version: "v21.0" });
       resolve(window.FB);
     };
     const script = document.createElement("script");
@@ -21,13 +19,13 @@ function loadFacebookSdk() {
   return fbSdkPromise;
 }
 
-export default function FacebookSignInButton({ onSuccess, onError }) {
+export default function FacebookSignInButton({ appId, onSuccess, onError }) {
   const [loading, setLoading] = useState(false);
 
   const handleClick = useCallback(async () => {
     setLoading(true);
     try {
-      const FB = await loadFacebookSdk();
+      const FB = await loadFacebookSdk(appId);
       FB.login((response) => {
         setLoading(false);
         if (response.authResponse?.accessToken) {
@@ -40,9 +38,9 @@ export default function FacebookSignInButton({ onSuccess, onError }) {
       setLoading(false);
       onError?.(err);
     }
-  }, [onSuccess, onError]);
+  }, [appId, onSuccess, onError]);
 
-  if (!FACEBOOK_APP_ID) return null;
+  if (!appId) return null;
 
   return (
     <button type="button" onClick={handleClick} disabled={loading}

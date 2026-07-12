@@ -378,6 +378,20 @@ async def logout(response: Response):
 async def me(request: Request):
     return await get_current_user(request)
 
+@api_router.get("/auth/providers")
+async def get_auth_providers():
+    """Client IDs des fournisseurs de connexion sociale configurés (publics, pas des
+    secrets — c'est leur usage normal d'être embarqués côté client). Permet au
+    frontend de savoir quels boutons afficher sans dupliquer la configuration dans
+    ses propres variables d'environnement : la source de vérité est settings_store,
+    modifiable depuis Admin > Paramètres sans rebuild du frontend."""
+    settings = await settings_store.get_settings(db)
+    return {
+        "google_client_id": settings.get("google_client_id", ""),
+        "facebook_app_id": settings.get("facebook_app_id", ""),
+        "apple_client_id": settings.get("apple_client_id", ""),
+    }
+
 @api_router.post("/auth/google")
 async def google_auth(body: GoogleAuthRequest, response: Response):
     settings = await settings_store.get_settings(db)
