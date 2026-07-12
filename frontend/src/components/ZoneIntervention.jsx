@@ -1,5 +1,6 @@
 import { MapPin, CheckCircle, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import zoneTexture from "@/assets/zone-texture.jpg";
 
 const communes = [
   "Pointe-à-Pitre", "Les Abymes", "Baie-Mahault", "Le Gosier", "Sainte-Anne",
@@ -20,8 +21,7 @@ export default function ZoneIntervention({ whatsapp }) {
       <div
         className="absolute inset-0 opacity-5"
         style={{
-          backgroundImage:
-            "url(https://static.prod-images.emergentagent.com/jobs/bed7ba01-3d73-4dbb-bf1f-2181e68e96b9/images/017d698e7e8c677b68fdcb7ae0b29fa1a9f8cd2da340b7be420f29ea090488ce.png)",
+          backgroundImage: `url(${zoneTexture})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}

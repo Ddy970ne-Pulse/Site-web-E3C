@@ -1,8 +1,12 @@
 import { ChevronDown, Shield, Star, Clock, FileEdit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
-import heroNight from "@/assets/hero-night.jpg";
-import heroDay from "@/assets/hero-day.jpg";
+
+// Servies depuis /public (et non importées via webpack) pour que leur URL
+// corresponde exactement au <link rel="preload"> injecté dans index.html —
+// sinon le préchargement précoce ne serait pas réutilisé par le navigateur.
+const heroNight = "/hero-night.jpg";
+const heroDay = "/hero-day.jpg";
 
 const WHATSAPP_SVG = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
