@@ -12,6 +12,14 @@ logger = logging.getLogger(__name__)
 
 AUTO_FIX_INTERVAL_SECONDS = 3600  # 1h — pas de scheduler externe requis
 EXPIRED_SESSION_MAX_AGE_HOURS = 24  # durée de vie d'une session Stripe Checkout
+ALERT_COOLDOWN_HOURS = 12  # ne pas ré-alerter sur le même problème avant ce délai
+
+CHECK_LABELS_FR = {
+    "database": "Base de données",
+    "stripe_api": "API Stripe",
+    "email": "Envoi d'emails (Brevo)",
+    "uploads_storage": "Stockage des images",
+}
 
 
 async def check_database(db) -> dict:
@@ -103,15 +111,55 @@ async def run_auto_fixes(db) -> dict:
     return {"fixed_at": datetime.now(timezone.utc).isoformat(), "results": fixes}
 
 
-async def periodic_auto_fix_loop(db, interval_seconds: int = AUTO_FIX_INTERVAL_SECONDS):
+def checks_needing_alert(checks: dict, alert_state: dict, now: datetime) -> list:
+    """Décide quels contrôles en erreur doivent déclencher une alerte, en respectant
+    un délai de rappel (ALERT_COOLDOWN_HOURS) pour éviter le spam. `alert_state` est
+    mutée : les contrôles redevenus sains sont oubliés, ceux qui viennent d'alerter
+    sont horodatés. Ne considère que les contrôles listés dans CHECK_LABELS_FR —
+    les statuts "disabled"/"warning" (config optionnelle absente) ne sont pas des
+    pannes et ne doivent pas alerter l'admin."""
+    to_alert = []
+    for name in CHECK_LABELS_FR:
+        result = checks.get(name, {})
+        if result.get("status") != "error":
+            alert_state.pop(name, None)
+            continue
+        last = alert_state.get(name)
+        if last and (now - last) < timedelta(hours=ALERT_COOLDOWN_HOURS):
+            continue
+        alert_state[name] = now
+        to_alert.append((name, result))
+    return to_alert
+
+
+async def periodic_auto_fix_loop(db, *, check_kwargs: dict = None, send_alert=None,
+                                   admin_email: str = None,
+                                   interval_seconds: int = AUTO_FIX_INTERVAL_SECONDS):
     """Boucle en tâche de fond du process FastAPI — aucune infra externe (cron/Celery)
-    requise. S'arrête proprement si la tâche est annulée (arrêt de l'app)."""
+    requise. S'arrête proprement si la tâche est annulée (arrêt de l'app).
+
+    Si check_kwargs/send_alert/admin_email sont fournis, envoie aussi une alerte
+    (email, throttlée à une fois toutes les ALERT_COOLDOWN_HOURS par contrôle) quand
+    un contrôle passe en erreur — DB, Stripe, email ou stockage en panne."""
     import asyncio
+    alert_state = {}
     while True:
         try:
             await asyncio.sleep(interval_seconds)
             result = await run_auto_fixes(db)
             logger.info(f"Auto-fix périodique exécuté: {result}")
+
+            if check_kwargs and send_alert and admin_email:
+                checks_result = await run_all_checks(db=db, **check_kwargs)
+                for name, res in checks_needing_alert(
+                        checks_result["checks"], alert_state, datetime.now(timezone.utc)):
+                    label = CHECK_LABELS_FR.get(name, name)
+                    await send_alert(
+                        admin_email,
+                        f"[E3C] Alerte diagnostic : {label}",
+                        f"<p>Le contrôle <b>{label}</b> est en erreur.</p>"
+                        f"<p>Détail : {res.get('detail', 'voir le tableau de bord admin')}</p>",
+                    )
         except asyncio.CancelledError:
             break
         except Exception as e:

@@ -278,7 +278,14 @@ async def startup():
     await db.invoices.create_index("client_id")
     await db.payment_transactions.create_index("session_id")
     await seed_admin()
-    app.state.auto_fix_task = asyncio.create_task(diagnostics.periodic_auto_fix_loop(db))
+    diagnostics_check_kwargs = dict(
+        stripe_sdk=stripe_sdk, stripe_api_key=STRIPE_API_KEY,
+        stripe_webhook_secret=STRIPE_WEBHOOK_SECRET, brevo_api_key=BREVO_API_KEY,
+        uploads_dir=UPLOADS_DIR, google_client_id=GOOGLE_CLIENT_ID,
+    )
+    app.state.auto_fix_task = asyncio.create_task(diagnostics.periodic_auto_fix_loop(
+        db, check_kwargs=diagnostics_check_kwargs, send_alert=send_email, admin_email=ADMIN_EMAIL,
+    ))
 
 @app.on_event("shutdown")
 async def shutdown():
