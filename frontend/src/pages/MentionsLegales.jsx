@@ -43,8 +43,7 @@ export default function MentionsLegales() {
           <section>
             <h2 className="font-outfit font-semibold text-[#1A1A1A] dark:text-white text-base mb-3">3. Hébergement</h2>
             <div className="bg-white dark:bg-[#121212] border border-black/7 dark:border-white/5 rounded-sm p-5 space-y-1.5">
-              <p><span className="text-[#9E9E9E] dark:text-gray-500">Hébergeur :</span> <span className="text-[#1A1A1A] dark:text-gray-200">Emergent Labs Inc.</span></p>
-              <p><span className="text-[#9E9E9E] dark:text-gray-500">Site :</span> <span className="text-[#1A1A1A] dark:text-gray-200"><a href="https://emergent.sh" target="_blank" rel="noopener noreferrer" className="text-[#D4AF37] hover:underline">emergent.sh</a></span></p>
+              <p><span className="text-[#9E9E9E] dark:text-gray-500">Hébergeur :</span> <span className="text-[#1A1A1A] dark:text-gray-200">À compléter</span></p>
             </div>
           </section>
 

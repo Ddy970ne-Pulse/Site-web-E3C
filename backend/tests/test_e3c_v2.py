@@ -240,7 +240,7 @@ class TestPayments:
                 "tranche_id": tranche_id,
                 "origin_url": BASE_URL
             })
-            # Should return 200 with checkout_url (emergent test key)
+            # Should return 200 with checkout_url (Stripe test key)
             assert r2.status_code == 200, f"Checkout failed: {r2.text}"
             data = r2.json()
             assert "checkout_url" in data
