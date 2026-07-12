@@ -37,11 +37,12 @@ const SECTIONS = [
     ],
   },
   {
-    title: "PayPal — pas encore actif",
-    help: "Champs prêts pour quand l'intégration de paiement PayPal sera ajoutée au site. Les renseigner maintenant ne déclenche encore rien.",
+    title: "PayPal — paiements",
+    help: "Depuis le tableau de bord développeur PayPal (developer.paypal.com) : Apps & Credentials. Utilisez les identifiants Sandbox pour tester avant de passer en Live.",
     fields: [
       { name: "paypal_client_id", label: "Client ID", placeholder: "" },
       { name: "paypal_client_secret", label: "Client Secret", placeholder: "" },
+      { name: "paypal_mode", label: "Mode (\"sandbox\" ou \"live\")", placeholder: "sandbox" },
     ],
   },
   {

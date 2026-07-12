@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { LogOut, FileText, Receipt, CreditCard, CheckCircle, XCircle, Download, AlertCircle, Landmark, Copy } from "lucide-react";
+import { LogOut, FileText, Receipt, CreditCard, CheckCircle, XCircle, Download, AlertCircle, Landmark, Copy, Wallet } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ax = () => axios.create({ withCredentials: true });
@@ -53,7 +53,7 @@ export default function ClientDashboard() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Handle payment return
+  // Handle payment return (Stripe)
   useEffect(() => {
     const payment = searchParams.get("payment");
     const sessionId = searchParams.get("session_id");
@@ -62,6 +62,19 @@ export default function ClientDashboard() {
       pollPaymentStatus(sessionId);
     } else if (payment === "cancelled") {
       setPaymentMsg("Paiement annulé.");
+    }
+  }, [searchParams]);
+
+  // Handle payment return (PayPal) — PayPal appends its own "token" (= order id)
+  // to the return_url alongside the query params we set.
+  useEffect(() => {
+    const paypalStatus = searchParams.get("paypal");
+    const orderId = searchParams.get("token");
+    if (paypalStatus === "success" && orderId) {
+      setPaymentMsg(""); setTab("invoices");
+      capturePayPalOrder(orderId);
+    } else if (paypalStatus === "cancelled") {
+      setPaymentMsg("Paiement PayPal annulé.");
     }
   }, [searchParams]);
 
@@ -76,6 +89,20 @@ export default function ClientDashboard() {
         setTimeout(() => pollPaymentStatus(sessionId, attempts + 1), 2000);
       }
     } catch { setTimeout(() => pollPaymentStatus(sessionId, attempts + 1), 2000); }
+  };
+
+  const capturePayPalOrder = async (orderId) => {
+    try {
+      const res = await ax().post(`${API}/payments/paypal/capture/${orderId}`);
+      if (res.data.payment_status === "paid") {
+        setPaymentMsg("Paiement PayPal réussi ! Votre facture a été mise à jour.");
+        fetchData();
+      } else {
+        setPaymentMsg("Paiement PayPal en attente de confirmation.");
+      }
+    } catch (err) {
+      setPaymentMsg(err.response?.data?.detail || "Erreur lors de la validation du paiement PayPal");
+    }
   };
 
   const handleLogout = async () => { await logout(); navigate("/"); };
@@ -107,6 +134,18 @@ export default function ClientDashboard() {
       if (res.data.checkout_url) window.location.href = res.data.checkout_url;
     } catch (err) {
       setPaymentMsg(err.response?.data?.detail || "Erreur lors du paiement");
+    }
+  };
+
+  const payTranchePayPal = async (invoice, tranche) => {
+    try {
+      const res = await ax().post(`${API}/payments/paypal/create-order`, {
+        invoice_id: invoice.id, tranche_id: tranche.id,
+        origin_url: window.location.origin
+      });
+      if (res.data.approve_url) window.location.href = res.data.approve_url;
+    } catch (err) {
+      setPaymentMsg(err.response?.data?.detail || "Erreur lors du paiement PayPal");
     }
   };
 
@@ -263,11 +302,16 @@ export default function ClientDashboard() {
                                   <CheckCircle size={13}/> Payé
                                 </span>
                               ) : (
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1.5 flex-wrap justify-end">
                                   <button onClick={() => toggleBankTransfer(t)}
                                     data-testid={`bank-transfer-tranche-${t.id}`}
                                     className="flex items-center gap-1 border border-white/15 text-gray-300 font-semibold text-xs px-3 py-1.5 hover:border-[#D4AF37]/50 hover:text-[#D4AF37] transition-colors rounded-sm">
                                     <Landmark size={12}/> Virement
+                                  </button>
+                                  <button onClick={() => payTranchePayPal(inv, t)}
+                                    data-testid={`paypal-tranche-${t.id}`}
+                                    className="flex items-center gap-1 bg-[#0070BA] text-white font-bold text-xs px-3 py-1.5 hover:bg-[#005ea6] transition-colors rounded-sm">
+                                    <Wallet size={12}/> PayPal
                                   </button>
                                   <button onClick={() => payTranche(inv, t)}
                                     data-testid={`pay-tranche-${t.id}`}

@@ -12,6 +12,7 @@ from google.auth.transport import requests as google_auth_requests
 import stripe as stripe_sdk
 import diagnostics
 import settings_store
+import paypal
 import httpx
 import os, logging, uuid, bcrypt, jwt, asyncio, secrets, io, shutil
 from pydantic import BaseModel, EmailStr, Field
@@ -256,6 +257,11 @@ class QuoteRequestCreate(BaseModel):
     estimated_total_ttc: Optional[float] = 0.0
 
 class CheckoutRequest(BaseModel):
+    invoice_id: str
+    tranche_id: str
+    origin_url: str
+
+class PayPalCheckoutRequest(BaseModel):
     invoice_id: str
     tranche_id: str
     origin_url: str
@@ -793,6 +799,85 @@ async def create_checkout(body: CheckoutRequest, request: Request):
         "payment_status": "pending", "created_at": datetime.now(timezone.utc).isoformat()
     })
     return {"checkout_url": session.url, "session_id": session.id}
+
+@api_router.post("/payments/paypal/create-order")
+async def create_paypal_order(body: PayPalCheckoutRequest, request: Request):
+    user = await get_current_user(request)
+    inv = await db.invoices.find_one({"id": body.invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(404, "Facture introuvable")
+    if user["role"] == "client" and inv["client_id"] != user["id"]:
+        raise HTTPException(403, "Accès refusé")
+    tranche = next((t for t in inv.get("payment_tranches", []) if t["id"] == body.tranche_id), None)
+    if not tranche:
+        raise HTTPException(404, "Tranche introuvable")
+    if tranche["status"] == "paid":
+        raise HTTPException(400, "Cette tranche est déjà payée")
+
+    settings = await settings_store.get_settings(db)
+    client_id = settings.get("paypal_client_id", "")
+    client_secret = settings.get("paypal_client_secret", "")
+    if not client_id or not client_secret:
+        raise HTTPException(503, "Paiement PayPal non configuré")
+    mode = settings.get("paypal_mode") or "sandbox"
+
+    return_url = f"{body.origin_url}/espace-client?paypal=success&invoice_id={body.invoice_id}&tranche_id={body.tranche_id}"
+    cancel_url = f"{body.origin_url}/espace-client?paypal=cancelled"
+    try:
+        order = await paypal.create_order(
+            client_id, client_secret, mode,
+            amount=float(tranche["amount"]), currency="EUR",
+            reference_id=f"{inv['invoice_number']}:{tranche['id']}",
+            return_url=return_url, cancel_url=cancel_url,
+        )
+    except httpx.HTTPError as e:
+        logger.error(f"Erreur création commande PayPal: {e}")
+        raise HTTPException(502, "Erreur lors de la création de la commande PayPal")
+    if not order.get("approve_url"):
+        raise HTTPException(502, "PayPal n'a pas renvoyé de lien d'approbation")
+
+    tx_id = str(uuid.uuid4())
+    await db.payment_transactions.insert_one({
+        "id": tx_id, "invoice_id": body.invoice_id, "tranche_id": body.tranche_id,
+        "invoice_number": inv["invoice_number"], "tranche_label": tranche["label"],
+        "client_id": user["id"], "client_name": inv["client_name"],
+        "amount": float(tranche["amount"]), "currency": "eur",
+        "session_id": order["order_id"], "checkout_url": order["approve_url"],
+        "payment_status": "pending", "payment_method": "paypal",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return {"approve_url": order["approve_url"], "order_id": order["order_id"]}
+
+@api_router.post("/payments/paypal/capture/{order_id}")
+async def capture_paypal_order(order_id: str, request: Request):
+    user = await get_current_user(request)
+    tx = await db.payment_transactions.find_one({"session_id": order_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(404, "Transaction introuvable")
+    if user["role"] == "client" and tx["client_id"] != user["id"]:
+        raise HTTPException(403, "Accès refusé")
+    if tx["payment_status"] == "paid":
+        return {"payment_status": "paid"}
+
+    settings = await settings_store.get_settings(db)
+    client_id = settings.get("paypal_client_id", "")
+    client_secret = settings.get("paypal_client_secret", "")
+    mode = settings.get("paypal_mode") or "sandbox"
+    if not client_id or not client_secret:
+        raise HTTPException(503, "Paiement PayPal non configuré")
+
+    try:
+        result = await paypal.capture_order(client_id, client_secret, mode, order_id)
+    except httpx.HTTPError as e:
+        logger.error(f"Erreur capture PayPal: {e}")
+        raise HTTPException(502, "Erreur lors de la validation du paiement PayPal")
+
+    if result.get("status") == "COMPLETED":
+        await db.payment_transactions.update_one({"session_id": order_id},
+            {"$set": {"payment_status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}})
+        await _mark_tranche_paid(tx["invoice_id"], tx["tranche_id"], payment_method="paypal")
+        return {"payment_status": "paid"}
+    return {"payment_status": "pending"}
 
 @api_router.get("/payments/status/{session_id}")
 async def get_payment_status(session_id: str, request: Request):
