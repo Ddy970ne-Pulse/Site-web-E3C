@@ -22,6 +22,7 @@ FIELDS = [
     ("google_client_id", "GOOGLE_CLIENT_ID", False),
     ("facebook_app_id", "FACEBOOK_APP_ID", False),
     ("facebook_app_secret", "FACEBOOK_APP_SECRET", True),
+    ("apple_client_id", "APPLE_CLIENT_ID", False),  # Services ID — pas de secret nécessaire
     ("paypal_client_id", "PAYPAL_CLIENT_ID", False),
     ("paypal_client_secret", "PAYPAL_CLIENT_SECRET", True),
     ("paypal_mode", "PAYPAL_MODE", False),  # "sandbox" ou "live"

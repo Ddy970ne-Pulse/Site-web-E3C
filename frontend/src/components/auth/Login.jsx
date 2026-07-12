@@ -4,13 +4,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import GoogleSignInButton from "./GoogleSignInButton";
 import FacebookSignInButton from "./FacebookSignInButton";
+import AppleSignInButton from "./AppleSignInButton";
 
 const GOOGLE_AUTH_ENABLED = Boolean(process.env.REACT_APP_GOOGLE_CLIENT_ID);
 const FACEBOOK_AUTH_ENABLED = Boolean(process.env.REACT_APP_FACEBOOK_APP_ID);
-const SOCIAL_AUTH_ENABLED = GOOGLE_AUTH_ENABLED || FACEBOOK_AUTH_ENABLED;
+const APPLE_AUTH_ENABLED = Boolean(process.env.REACT_APP_APPLE_CLIENT_ID);
+const SOCIAL_AUTH_ENABLED = GOOGLE_AUTH_ENABLED || FACEBOOK_AUTH_ENABLED || APPLE_AUTH_ENABLED;
 
 export default function Login() {
-  const { login, googleLogin, facebookLogin } = useAuth();
+  const { login, googleLogin, facebookLogin, appleLogin } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -31,10 +33,10 @@ export default function Login() {
     } finally { setLoading(false); }
   };
 
-  const handleSocialAuth = useCallback((loginFn, providerLabel) => async (token) => {
+  const handleSocialAuth = useCallback((loginFn, providerLabel) => async (...args) => {
     setError(""); setLoading(true);
     try {
-      const user = await loginFn(token);
+      const user = await loginFn(...args);
       navigate(user.role === "admin" ? "/admin" : "/espace-client", { replace: true });
     } catch (err) {
       const detail = err.response?.data?.detail;
@@ -78,6 +80,11 @@ export default function Login() {
                   <FacebookSignInButton
                     onSuccess={handleSocialAuth(facebookLogin, "Facebook")}
                     onError={handleSocialError("Facebook")} />
+                )}
+                {APPLE_AUTH_ENABLED && (
+                  <AppleSignInButton
+                    onSuccess={handleSocialAuth(appleLogin, "Apple")}
+                    onError={handleSocialError("Apple")} />
                 )}
               </div>
               <div className="flex items-center gap-3 my-6">

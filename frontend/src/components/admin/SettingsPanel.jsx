@@ -37,6 +37,13 @@ const SECTIONS = [
     ],
   },
   {
+    title: "Apple Sign-In",
+    help: "Nécessite un compte Apple Developer payant (99$/an) et une vérification de domaine. Depuis developer.apple.com : créez un « Services ID » (pas l'App ID) — c'est sa valeur qu'il faut coller ici. Aucun secret requis.",
+    fields: [
+      { name: "apple_client_id", label: "Services ID", placeholder: "com.e3c-construction.web" },
+    ],
+  },
+  {
     title: "PayPal — paiements",
     help: "Depuis le tableau de bord développeur PayPal (developer.paypal.com) : Apps & Credentials. Utilisez les identifiants Sandbox pour tester avant de passer en Live.",
     fields: [

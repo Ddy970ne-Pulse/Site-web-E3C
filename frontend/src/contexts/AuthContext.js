@@ -37,13 +37,19 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const appleLogin = async (idToken, name) => {
+    const { data } = await axios.post(`${API}/auth/apple`, { id_token: idToken, name }, { withCredentials: true });
+    setUser(data);
+    return data;
+  };
+
   const logout = async () => {
     await axios.post(`${API}/auth/logout`, {}, { withCredentials: true });
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, register, googleLogin, facebookLogin, logout, loading: user === undefined }}>
+    <AuthContext.Provider value={{ user, setUser, login, register, googleLogin, facebookLogin, appleLogin, logout, loading: user === undefined }}>
       {children}
     </AuthContext.Provider>
   );

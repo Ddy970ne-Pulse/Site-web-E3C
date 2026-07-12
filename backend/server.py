@@ -163,6 +163,12 @@ class GoogleAuthRequest(BaseModel):
 class FacebookAuthRequest(BaseModel):
     access_token: str
 
+class AppleAuthRequest(BaseModel):
+    id_token: str
+    # Apple ne renvoie le nom qu'une seule fois, à la toute première autorisation,
+    # et uniquement côté frontend (jamais dans le id_token) — donc transmis ici si présent.
+    name: Optional[str] = None
+
 class SettingsUpdate(BaseModel):
     stripe_api_key: Optional[str] = None
     stripe_webhook_secret: Optional[str] = None
@@ -170,6 +176,7 @@ class SettingsUpdate(BaseModel):
     google_client_id: Optional[str] = None
     facebook_app_id: Optional[str] = None
     facebook_app_secret: Optional[str] = None
+    apple_client_id: Optional[str] = None
     paypal_client_id: Optional[str] = None
     paypal_client_secret: Optional[str] = None
     paypal_mode: Optional[str] = None
@@ -428,6 +435,39 @@ async def facebook_auth(body: FacebookAuthRequest, response: Response):
     name = profile_data.get("name") or email.split("@")[0]
     return await _oauth_login_or_create(email, name, "facebook_id", profile_data["id"], response,
                                           provider_label="Facebook")
+
+_apple_jwks_client = None
+
+def _get_apple_jwks_client():
+    global _apple_jwks_client
+    if _apple_jwks_client is None:
+        _apple_jwks_client = jwt.PyJWKClient("https://appleid.apple.com/auth/keys")
+    return _apple_jwks_client
+
+@api_router.post("/auth/apple")
+async def apple_auth(body: AppleAuthRequest, response: Response):
+    settings = await settings_store.get_settings(db)
+    apple_client_id = settings.get("apple_client_id", "")
+    if not apple_client_id:
+        raise HTTPException(503, "Connexion Apple non configurée")
+    try:
+        signing_key = await asyncio.to_thread(
+            _get_apple_jwks_client().get_signing_key_from_jwt, body.id_token)
+        payload = jwt.decode(
+            body.id_token, signing_key.key, algorithms=["RS256"],
+            audience=apple_client_id, issuer="https://appleid.apple.com",
+        )
+    except jwt.PyJWTError:
+        raise HTTPException(401, "Jeton Apple invalide")
+
+    email = (payload.get("email") or "").lower().strip()
+    if not email or str(payload.get("email_verified")).lower() != "true":
+        raise HTTPException(401, "Email Apple non vérifié")
+
+    # Apple ne fournit le nom qu'à la 1ère autorisation (via le frontend, pas le jeton)
+    name = (body.name or "").strip() or email.split("@")[0]
+    return await _oauth_login_or_create(email, name, "apple_id", payload["sub"], response,
+                                          provider_label="Apple")
 
 async def _oauth_login_or_create(email: str, name: str, provider_id_field: str, provider_id: str,
                                    response: Response, provider_label: str) -> dict:
