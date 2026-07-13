@@ -1,193 +1,42 @@
-from pathlib import Path
-from dotenv import load_dotenv
-load_dotenv(Path(__file__).parent / ".env")
+"""FastAPI app entrypoint. Auth, payments, and admin routes live in
+routers/auth_routes.py, routers/payments_routes.py and routers/admin_routes.py
+(shared config/DB/auth-dependency plumbing in core.py) — this file keeps app
+wiring plus the remaining domains that didn't warrant their own module yet:
+quotes, invoices (CRUD/PDF — payment execution is in payments_routes.py),
+public contact form, quote requests, gallery, testimonials, and the pricing
+grid.
+"""
+import asyncio
+import io
+import uuid
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File, Form
+from fastapi import (APIRouter, FastAPI, File, Form, HTTPException, Request,
+                      UploadFile)
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
-from google.oauth2 import id_token as google_id_token
-from google.auth.transport import requests as google_auth_requests
-import stripe as stripe_sdk
+
 import diagnostics
 import settings_store
-import paypal
-import httpx
-import os, logging, uuid, bcrypt, jwt, asyncio, secrets, io, shutil
-from pydantic import BaseModel, EmailStr, Field
-from typing import List, Optional, Dict, Any
-from datetime import datetime, timezone, timedelta, date
-from bson import ObjectId
-
-# ─── Config ────────────────────────────────────────────────────────────────
-ROOT_DIR = Path(__file__).parent
-UPLOADS_DIR = ROOT_DIR / "uploads" / "gallery"
-UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-
-# Secrets that were previously committed to source as hardcoded defaults.
-# Never allow these values again, even if an operator re-enters them by hand.
-_LEAKED_DEFAULTS = {"E3C@Admin2026"}
-
-def require_env(name: str, min_length: int = 1) -> str:
-    value = os.environ.get(name, "")
-    if len(value) < min_length:
-        raise RuntimeError(
-            f"{name} environment variable is required and must be at least "
-            f"{min_length} characters. Refusing to start with a missing or weak value."
-        )
-    if value in _LEAKED_DEFAULTS:
-        raise RuntimeError(
-            f"{name} matches a default value that was previously hardcoded in "
-            f"source and committed to the repo's public history. Choose a new, unique value."
-        )
-    return value
-
-mongo_url = os.environ["MONGO_URL"]
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ["DB_NAME"]]
-JWT_SECRET = require_env("JWT_SECRET", min_length=32)
-JWT_ALGORITHM = "HS256"
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@e3c-construction.com")
-ADMIN_PASSWORD = require_env("ADMIN_PASSWORD", min_length=12)
-# Defaults used only when nothing is configured yet in the admin Settings panel
-# (settings_store.py falls back to these env vars). Read settings_store.get_settings(db)
-# for the current value at each use — never these constants directly, since an admin
-# can change them at runtime without a restart.
-SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "noreply@e3c-construction.com")
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
-# Required so integration secrets (Stripe/Brevo/Facebook/PayPal keys) can be stored
-# encrypted in the DB when set from the admin Settings panel.
-require_env("SETTINGS_ENCRYPTION_KEY", min_length=32)
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+import stripe as stripe_sdk
+from core import (ADMIN_EMAIL, FRONTEND_URL, ROOT_DIR, UPLOADS_DIR, db,
+                   get_current_user, limiter, logger, require_admin,
+                   seed_admin, send_email)
+from routers import admin_routes, auth_routes, payments_routes
 
 app = FastAPI(title="E3C API")
 api_router = APIRouter(prefix="/api")
 
-# ─── Password helpers ───────────────────────────────────────────────────────
-def hash_password(p: str) -> str:
-    return bcrypt.hashpw(p.encode(), bcrypt.gensalt()).decode()
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-def verify_password(plain: str, hashed: str) -> bool:
-    return bcrypt.checkpw(plain.encode(), hashed.encode())
-
-# ─── JWT helpers ────────────────────────────────────────────────────────────
-def create_access_token(user_id: str, email: str, role: str) -> str:
-    payload = {"sub": user_id, "email": email, "role": role,
-               "exp": datetime.now(timezone.utc) + timedelta(hours=24), "type": "access"}
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-def create_refresh_token(user_id: str) -> str:
-    payload = {"sub": user_id, "exp": datetime.now(timezone.utc) + timedelta(days=7), "type": "refresh"}
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-async def get_current_user(request: Request) -> dict:
-    token = request.cookies.get("access_token")
-    if not token:
-        auth = request.headers.get("Authorization", "")
-        if auth.startswith("Bearer "):
-            token = auth[7:]
-    if not token:
-        raise HTTPException(status_code=401, detail="Non authentifié")
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        if payload.get("type") != "access":
-            raise HTTPException(status_code=401, detail="Token invalide")
-        user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0})
-        if not user:
-            raise HTTPException(status_code=401, detail="Utilisateur introuvable")
-        user.pop("password_hash", None)
-        return user
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Session expirée")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Token invalide")
-
-async def require_admin(request: Request) -> dict:
-    user = await get_current_user(request)
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Accès réservé à l'administrateur")
-    return user
-
-async def require_client(request: Request) -> dict:
-    user = await get_current_user(request)
-    if user.get("role") != "client":
-        raise HTTPException(status_code=403, detail="Accès réservé aux clients")
-    return user
-
-# ─── Email helper (Brevo) ───────────────────────────────────────────────────
-async def send_email(to_email: str, subject: str, html: str):
-    settings = await settings_store.get_settings(db)
-    brevo_api_key = settings.get("brevo_api_key", "")
-    if not brevo_api_key:
-        logger.info(f"[EMAIL SKIPPED - No Brevo key] To: {to_email} | Subject: {subject}")
-        return
-    try:
-        async with httpx.AsyncClient() as c:
-            await c.post("https://api.brevo.com/v3/smtp/email",
-                headers={"api-key": brevo_api_key, "Content-Type": "application/json"},
-                json={"sender": {"email": SENDER_EMAIL, "name": "E3C Constructions"},
-                      "to": [{"email": to_email}], "subject": subject, "htmlContent": html},
-                timeout=10)
-    except Exception as e:
-        logger.error(f"Email error: {e}")
-
-# ─── Quote number / Invoice number generators ──────────────────────────────
-async def next_quote_number() -> str:
-    year = datetime.now().year
-    count = await db.quotes.count_documents({"quote_number": {"$regex": f"^DEV-{year}-"}})
-    return f"DEV-{year}-{str(count + 1).zfill(3)}"
-
-async def next_invoice_number() -> str:
-    year = datetime.now().year
-    count = await db.invoices.count_documents({"invoice_number": {"$regex": f"^FAC-{year}-"}})
-    return f"FAC-{year}-{str(count + 1).zfill(3)}"
 
 # ─── Pydantic Models ────────────────────────────────────────────────────────
-class RegisterRequest(BaseModel):
-    email: EmailStr
-    password: str
-    name: str
-    phone: Optional[str] = ""
-
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-class GoogleAuthRequest(BaseModel):
-    credential: str
-
-class FacebookAuthRequest(BaseModel):
-    access_token: str
-
-class AppleAuthRequest(BaseModel):
-    id_token: str
-    # Apple ne renvoie le nom qu'une seule fois, à la toute première autorisation,
-    # et uniquement côté frontend (jamais dans le id_token) — donc transmis ici si présent.
-    name: Optional[str] = None
-
-class SettingsUpdate(BaseModel):
-    stripe_api_key: Optional[str] = None
-    stripe_webhook_secret: Optional[str] = None
-    brevo_api_key: Optional[str] = None
-    google_client_id: Optional[str] = None
-    facebook_app_id: Optional[str] = None
-    facebook_app_secret: Optional[str] = None
-    apple_client_id: Optional[str] = None
-    paypal_client_id: Optional[str] = None
-    paypal_client_secret: Optional[str] = None
-    paypal_mode: Optional[str] = None
-    bank_account_holder: Optional[str] = None
-    bank_iban: Optional[str] = None
-    bank_bic: Optional[str] = None
-    bank_name: Optional[str] = None
-
-class MarkTranchePaidRequest(BaseModel):
-    payment_method: str = "virement"  # virement | especes | cheque
-
 class LineItem(BaseModel):
     description: str
     quantity: float
@@ -263,16 +112,6 @@ class QuoteRequestCreate(BaseModel):
     estimated_total_ht: Optional[float] = 0.0
     estimated_total_ttc: Optional[float] = 0.0
 
-class CheckoutRequest(BaseModel):
-    invoice_id: str
-    tranche_id: str
-    origin_url: str
-
-class PayPalCheckoutRequest(BaseModel):
-    invoice_id: str
-    tranche_id: str
-    origin_url: str
-
 class TestimonialCreate(BaseModel):
     name: str
     commune: Optional[str] = ""
@@ -318,233 +157,21 @@ async def startup():
     ))
 
 @app.on_event("shutdown")
-async def shutdown():
+async def shutdown_auto_fix():
     task = getattr(app.state, "auto_fix_task", None)
     if task:
         task.cancel()
 
-async def seed_admin():
-    existing = await db.users.find_one({"email": ADMIN_EMAIL})
-    if not existing:
-        await db.users.insert_one({
-            "id": str(uuid.uuid4()), "email": ADMIN_EMAIL,
-            "password_hash": hash_password(ADMIN_PASSWORD),
-            "name": "Administrateur E3C", "phone": "0690 44 97 14",
-            "role": "admin", "created_at": datetime.now(timezone.utc).isoformat()
-        })
-        logger.info(f"Admin créé: {ADMIN_EMAIL}")
-    elif not verify_password(ADMIN_PASSWORD, existing.get("password_hash", "")):
-        await db.users.update_one({"email": ADMIN_EMAIL},
-            {"$set": {"password_hash": hash_password(ADMIN_PASSWORD)}})
+# ─── Quote number / Invoice number generators ──────────────────────────────
+async def next_quote_number() -> str:
+    year = datetime.now().year
+    count = await db.quotes.count_documents({"quote_number": {"$regex": f"^DEV-{year}-"}})
+    return f"DEV-{year}-{str(count + 1).zfill(3)}"
 
-# ─── Auth Routes ────────────────────────────────────────────────────────────
-@api_router.post("/auth/register")
-async def register(body: RegisterRequest, response: Response):
-    email = body.email.lower().strip()
-    if await db.users.find_one({"email": email}):
-        raise HTTPException(400, "Email déjà utilisé")
-    uid = str(uuid.uuid4())
-    await db.users.insert_one({
-        "id": uid, "email": email, "password_hash": hash_password(body.password),
-        "name": body.name, "phone": body.phone, "role": "client",
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
-    access = create_access_token(uid, email, "client")
-    refresh = create_refresh_token(uid)
-    _set_cookies(response, access, refresh)
-    return {"id": uid, "email": email, "name": body.name, "role": "client"}
-
-@api_router.post("/auth/login")
-async def login(body: LoginRequest, response: Response):
-    email = body.email.lower().strip()
-    user = await db.users.find_one({"email": email}, {"_id": 0})
-    if not user or not user.get("password_hash"):
-        raise HTTPException(401, "Email ou mot de passe incorrect")
-    if not verify_password(body.password, user["password_hash"]):
-        raise HTTPException(401, "Email ou mot de passe incorrect")
-    access = create_access_token(user["id"], email, user["role"])
-    refresh = create_refresh_token(user["id"])
-    _set_cookies(response, access, refresh)
-    user.pop("password_hash", None)
-    return user
-
-@api_router.post("/auth/logout")
-async def logout(response: Response):
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
-    return {"message": "Déconnexion réussie"}
-
-@api_router.get("/auth/me")
-async def me(request: Request):
-    return await get_current_user(request)
-
-@api_router.get("/auth/providers")
-async def get_auth_providers():
-    """Client IDs des fournisseurs de connexion sociale configurés (publics, pas des
-    secrets — c'est leur usage normal d'être embarqués côté client). Permet au
-    frontend de savoir quels boutons afficher sans dupliquer la configuration dans
-    ses propres variables d'environnement : la source de vérité est settings_store,
-    modifiable depuis Admin > Paramètres sans rebuild du frontend."""
-    settings = await settings_store.get_settings(db)
-    return {
-        "google_client_id": settings.get("google_client_id", ""),
-        "facebook_app_id": settings.get("facebook_app_id", ""),
-        "apple_client_id": settings.get("apple_client_id", ""),
-    }
-
-@api_router.post("/auth/google")
-async def google_auth(body: GoogleAuthRequest, response: Response):
-    settings = await settings_store.get_settings(db)
-    google_client_id = settings.get("google_client_id", "")
-    if not google_client_id:
-        raise HTTPException(503, "Connexion Google non configurée")
-    try:
-        idinfo = await asyncio.to_thread(
-            google_id_token.verify_oauth2_token,
-            body.credential, google_auth_requests.Request(), google_client_id,
-        )
-    except ValueError:
-        raise HTTPException(401, "Jeton Google invalide")
-
-    email = (idinfo.get("email") or "").lower().strip()
-    if not email or not idinfo.get("email_verified"):
-        raise HTTPException(401, "Email Google non vérifié")
-
-    name = idinfo.get("name") or email.split("@")[0]
-    return await _oauth_login_or_create(email, name, "google_id", idinfo["sub"], response,
-                                          provider_label="Google")
-
-@api_router.post("/auth/facebook")
-async def facebook_auth(body: FacebookAuthRequest, response: Response):
-    settings = await settings_store.get_settings(db)
-    facebook_app_id = settings.get("facebook_app_id", "")
-    facebook_app_secret = settings.get("facebook_app_secret", "")
-    if not facebook_app_id or not facebook_app_secret:
-        raise HTTPException(503, "Connexion Facebook non configurée")
-    try:
-        async with httpx.AsyncClient(timeout=10) as c:
-            debug = await c.get("https://graph.facebook.com/debug_token", params={
-                "input_token": body.access_token,
-                "access_token": f"{facebook_app_id}|{facebook_app_secret}",
-            })
-            debug.raise_for_status()
-            debug_data = debug.json().get("data", {})
-            if not debug_data.get("is_valid") or debug_data.get("app_id") != facebook_app_id:
-                raise HTTPException(401, "Jeton Facebook invalide")
-
-            profile = await c.get("https://graph.facebook.com/me", params={
-                "fields": "id,name,email",
-                "access_token": body.access_token,
-            })
-            profile.raise_for_status()
-            profile_data = profile.json()
-    except httpx.HTTPError:
-        raise HTTPException(401, "Jeton Facebook invalide")
-
-    # Facebook ne renvoie le champ email que si le compte a un email vérifié
-    email = (profile_data.get("email") or "").lower().strip()
-    if not email:
-        raise HTTPException(401, "Votre compte Facebook doit avoir un email vérifié pour continuer")
-
-    name = profile_data.get("name") or email.split("@")[0]
-    return await _oauth_login_or_create(email, name, "facebook_id", profile_data["id"], response,
-                                          provider_label="Facebook")
-
-_apple_jwks_client = None
-
-def _get_apple_jwks_client():
-    global _apple_jwks_client
-    if _apple_jwks_client is None:
-        _apple_jwks_client = jwt.PyJWKClient("https://appleid.apple.com/auth/keys")
-    return _apple_jwks_client
-
-@api_router.post("/auth/apple")
-async def apple_auth(body: AppleAuthRequest, response: Response):
-    settings = await settings_store.get_settings(db)
-    apple_client_id = settings.get("apple_client_id", "")
-    if not apple_client_id:
-        raise HTTPException(503, "Connexion Apple non configurée")
-    try:
-        signing_key = await asyncio.to_thread(
-            _get_apple_jwks_client().get_signing_key_from_jwt, body.id_token)
-        payload = jwt.decode(
-            body.id_token, signing_key.key, algorithms=["RS256"],
-            audience=apple_client_id, issuer="https://appleid.apple.com",
-        )
-    except jwt.PyJWTError:
-        raise HTTPException(401, "Jeton Apple invalide")
-
-    email = (payload.get("email") or "").lower().strip()
-    if not email or str(payload.get("email_verified")).lower() != "true":
-        raise HTTPException(401, "Email Apple non vérifié")
-
-    # Apple ne fournit le nom qu'à la 1ère autorisation (via le frontend, pas le jeton)
-    name = (body.name or "").strip() or email.split("@")[0]
-    return await _oauth_login_or_create(email, name, "apple_id", payload["sub"], response,
-                                          provider_label="Apple")
-
-async def _oauth_login_or_create(email: str, name: str, provider_id_field: str, provider_id: str,
-                                   response: Response, provider_label: str) -> dict:
-    existing = await db.users.find_one({"email": email}, {"_id": 0})
-    if existing and existing.get("role") == "admin":
-        raise HTTPException(403, f"La connexion {provider_label} n'est pas autorisée pour les administrateurs")
-
-    if existing:
-        uid, role, name = existing["id"], existing["role"], existing["name"]
-        if not existing.get(provider_id_field):
-            await db.users.update_one({"id": uid}, {"$set": {provider_id_field: provider_id}})
-    else:
-        uid, role = str(uuid.uuid4()), "client"
-        await db.users.insert_one({
-            "id": uid, "email": email, "password_hash": None,
-            provider_id_field: provider_id, "name": name, "phone": "",
-            "role": role, "created_at": datetime.now(timezone.utc).isoformat()
-        })
-
-    access = create_access_token(uid, email, role)
-    refresh = create_refresh_token(uid)
-    _set_cookies(response, access, refresh)
-    return {"id": uid, "email": email, "name": name, "role": role}
-
-def _set_cookies(response: Response, access: str, refresh: str):
-    response.set_cookie("access_token", access, httponly=True, secure=COOKIE_SECURE,
-                        samesite="lax", max_age=86400, path="/")
-    response.set_cookie("refresh_token", refresh, httponly=True, secure=COOKIE_SECURE,
-                        samesite="lax", max_age=604800, path="/")
-
-# ─── Client management (admin) ──────────────────────────────────────────────
-@api_router.get("/clients")
-async def list_clients(request: Request):
-    await require_admin(request)
-    clients = await db.users.find({"role": "client"}, {"_id": 0, "password_hash": 0}).to_list(1000)
-    return clients
-
-# ─── Diagnostics (admin) ──────────────────────────────────────────────────────
-@api_router.get("/admin/diagnostics")
-async def get_diagnostics(request: Request):
-    await require_admin(request)
-    settings = await settings_store.get_settings(db)
-    return await diagnostics.run_all_checks(
-        db=db, stripe_sdk=stripe_sdk, settings=settings, uploads_dir=UPLOADS_DIR,
-    )
-
-@api_router.post("/admin/diagnostics/auto-fix")
-async def trigger_auto_fix(request: Request):
-    await require_admin(request)
-    return await diagnostics.run_auto_fixes(db)
-
-# ─── Settings (admin) ─────────────────────────────────────────────────────────
-@api_router.get("/admin/settings")
-async def get_settings_status(request: Request):
-    await require_admin(request)
-    return await settings_store.get_settings_status(db)
-
-@api_router.put("/admin/settings")
-async def update_settings(body: SettingsUpdate, request: Request):
-    await require_admin(request)
-    updates = {k: v for k, v in body.model_dump().items() if v is not None}
-    await settings_store.update_settings(db, updates)
-    return await settings_store.get_settings_status(db)
+async def next_invoice_number() -> str:
+    year = datetime.now().year
+    count = await db.invoices.count_documents({"invoice_number": {"$regex": f"^FAC-{year}-"}})
+    return f"FAC-{year}-{str(count + 1).zfill(3)}"
 
 # ─── Quote Routes ────────────────────────────────────────────────────────────
 @api_router.get("/quotes")
@@ -797,261 +424,6 @@ async def download_invoice_pdf(invoice_id: str, request: Request):
     pdf_bytes = generate_invoice_pdf(inv)
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={inv['invoice_number']}.pdf"})
-
-# ─── Payment Routes ───────────────────────────────────────────────────────────
-@api_router.post("/payments/checkout")
-async def create_checkout(body: CheckoutRequest, request: Request):
-    user = await get_current_user(request)
-    inv = await db.invoices.find_one({"id": body.invoice_id}, {"_id": 0})
-    if not inv:
-        raise HTTPException(404, "Facture introuvable")
-    if user["role"] == "client" and inv["client_id"] != user["id"]:
-        raise HTTPException(403, "Accès refusé")
-    tranche = next((t for t in inv.get("payment_tranches", []) if t["id"] == body.tranche_id), None)
-    if not tranche:
-        raise HTTPException(404, "Tranche introuvable")
-    if tranche["status"] == "paid":
-        raise HTTPException(400, "Cette tranche est déjà payée")
-    # Existing pending session?
-    existing_tx = await db.payment_transactions.find_one({
-        "invoice_id": body.invoice_id, "tranche_id": body.tranche_id,
-        "payment_status": "pending"}, {"_id": 0})
-    if existing_tx:
-        return {"checkout_url": existing_tx.get("checkout_url", ""), "session_id": existing_tx["session_id"]}
-
-    settings = await settings_store.get_settings(db)
-    stripe_api_key = settings.get("stripe_api_key", "")
-    if not stripe_api_key:
-        raise HTTPException(503, "Paiement par carte non configuré")
-
-    success_url = f"{body.origin_url}/espace-client?payment=success&session_id={{CHECKOUT_SESSION_ID}}"
-    cancel_url = f"{body.origin_url}/espace-client?payment=cancelled"
-    session = await stripe_sdk.checkout.Session.create_async(
-        api_key=stripe_api_key,
-        mode="payment",
-        line_items=[{
-            "price_data": {
-                "currency": "eur",
-                "unit_amount": int(round(float(tranche["amount"]) * 100)),
-                "product_data": {"name": f"{inv['invoice_number']} — {tranche['label']}"},
-            },
-            "quantity": 1,
-        }],
-        success_url=success_url,
-        cancel_url=cancel_url,
-        metadata={"invoice_id": body.invoice_id, "tranche_id": body.tranche_id,
-                  "client_id": user["id"], "invoice_number": inv["invoice_number"],
-                  "tranche_label": tranche["label"]}
-    )
-    tx_id = str(uuid.uuid4())
-    await db.payment_transactions.insert_one({
-        "id": tx_id, "invoice_id": body.invoice_id, "tranche_id": body.tranche_id,
-        "invoice_number": inv["invoice_number"], "tranche_label": tranche["label"],
-        "client_id": user["id"], "client_name": inv["client_name"],
-        "amount": float(tranche["amount"]), "currency": "eur",
-        "session_id": session.id, "checkout_url": session.url,
-        "payment_status": "pending", "created_at": datetime.now(timezone.utc).isoformat()
-    })
-    return {"checkout_url": session.url, "session_id": session.id}
-
-@api_router.post("/payments/paypal/create-order")
-async def create_paypal_order(body: PayPalCheckoutRequest, request: Request):
-    user = await get_current_user(request)
-    inv = await db.invoices.find_one({"id": body.invoice_id}, {"_id": 0})
-    if not inv:
-        raise HTTPException(404, "Facture introuvable")
-    if user["role"] == "client" and inv["client_id"] != user["id"]:
-        raise HTTPException(403, "Accès refusé")
-    tranche = next((t for t in inv.get("payment_tranches", []) if t["id"] == body.tranche_id), None)
-    if not tranche:
-        raise HTTPException(404, "Tranche introuvable")
-    if tranche["status"] == "paid":
-        raise HTTPException(400, "Cette tranche est déjà payée")
-
-    settings = await settings_store.get_settings(db)
-    client_id = settings.get("paypal_client_id", "")
-    client_secret = settings.get("paypal_client_secret", "")
-    if not client_id or not client_secret:
-        raise HTTPException(503, "Paiement PayPal non configuré")
-    mode = settings.get("paypal_mode") or "sandbox"
-
-    return_url = f"{body.origin_url}/espace-client?paypal=success&invoice_id={body.invoice_id}&tranche_id={body.tranche_id}"
-    cancel_url = f"{body.origin_url}/espace-client?paypal=cancelled"
-    try:
-        order = await paypal.create_order(
-            client_id, client_secret, mode,
-            amount=float(tranche["amount"]), currency="EUR",
-            reference_id=f"{inv['invoice_number']}:{tranche['id']}",
-            return_url=return_url, cancel_url=cancel_url,
-        )
-    except httpx.HTTPError as e:
-        logger.error(f"Erreur création commande PayPal: {e}")
-        raise HTTPException(502, "Erreur lors de la création de la commande PayPal")
-    if not order.get("approve_url"):
-        raise HTTPException(502, "PayPal n'a pas renvoyé de lien d'approbation")
-
-    tx_id = str(uuid.uuid4())
-    await db.payment_transactions.insert_one({
-        "id": tx_id, "invoice_id": body.invoice_id, "tranche_id": body.tranche_id,
-        "invoice_number": inv["invoice_number"], "tranche_label": tranche["label"],
-        "client_id": user["id"], "client_name": inv["client_name"],
-        "amount": float(tranche["amount"]), "currency": "eur",
-        "session_id": order["order_id"], "checkout_url": order["approve_url"],
-        "payment_status": "pending", "payment_method": "paypal",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    })
-    return {"approve_url": order["approve_url"], "order_id": order["order_id"]}
-
-@api_router.post("/payments/paypal/capture/{order_id}")
-async def capture_paypal_order(order_id: str, request: Request):
-    user = await get_current_user(request)
-    tx = await db.payment_transactions.find_one({"session_id": order_id}, {"_id": 0})
-    if not tx:
-        raise HTTPException(404, "Transaction introuvable")
-    if user["role"] == "client" and tx["client_id"] != user["id"]:
-        raise HTTPException(403, "Accès refusé")
-    if tx["payment_status"] == "paid":
-        return {"payment_status": "paid"}
-
-    settings = await settings_store.get_settings(db)
-    client_id = settings.get("paypal_client_id", "")
-    client_secret = settings.get("paypal_client_secret", "")
-    mode = settings.get("paypal_mode") or "sandbox"
-    if not client_id or not client_secret:
-        raise HTTPException(503, "Paiement PayPal non configuré")
-
-    try:
-        result = await paypal.capture_order(client_id, client_secret, mode, order_id)
-    except httpx.HTTPError as e:
-        logger.error(f"Erreur capture PayPal: {e}")
-        raise HTTPException(502, "Erreur lors de la validation du paiement PayPal")
-
-    if result.get("status") == "COMPLETED":
-        await db.payment_transactions.update_one({"session_id": order_id},
-            {"$set": {"payment_status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}})
-        await _mark_tranche_paid(tx["invoice_id"], tx["tranche_id"], payment_method="paypal")
-        return {"payment_status": "paid"}
-    return {"payment_status": "pending"}
-
-@api_router.get("/payments/status/{session_id}")
-async def get_payment_status(session_id: str, request: Request):
-    user = await get_current_user(request)
-    tx = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
-    if not tx:
-        raise HTTPException(404, "Transaction introuvable")
-    if user["role"] == "client" and tx["client_id"] != user["id"]:
-        raise HTTPException(403, "Accès refusé")
-
-    settings = await settings_store.get_settings(db)
-    session = await stripe_sdk.checkout.Session.retrieve_async(
-        session_id, api_key=settings.get("stripe_api_key", ""))
-
-    if session.payment_status == "paid" and tx["payment_status"] != "paid":
-        await db.payment_transactions.update_one({"session_id": session_id},
-            {"$set": {"payment_status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}})
-        await _mark_tranche_paid(tx["invoice_id"], tx["tranche_id"])
-
-    return {"status": session.status, "payment_status": session.payment_status,
-            "amount": (session.amount_total or 0) / 100, "session_id": session_id}
-
-@api_router.get("/payments")
-async def list_payments(request: Request):
-    user = await get_current_user(request)
-    query = {} if user["role"] == "admin" else {"client_id": user["id"]}
-    txs = await db.payment_transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
-    return txs
-
-@api_router.get("/payments/bank-transfer-info")
-async def get_bank_transfer_info(request: Request):
-    await get_current_user(request)
-    settings = await settings_store.get_settings(db)
-    configured = bool(settings.get("bank_iban"))
-    return {
-        "configured": configured,
-        "account_holder": settings.get("bank_account_holder", ""),
-        "iban": settings.get("bank_iban", ""),
-        "bic": settings.get("bank_bic", ""),
-        "bank_name": settings.get("bank_name", ""),
-    }
-
-@api_router.post("/invoices/{invoice_id}/tranches/{tranche_id}/mark-paid")
-async def mark_tranche_paid_manually(invoice_id: str, tranche_id: str,
-                                       body: MarkTranchePaidRequest, request: Request):
-    await require_admin(request)
-    if body.payment_method not in ("virement", "especes", "cheque"):
-        raise HTTPException(400, "Méthode de paiement invalide")
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
-    if not inv:
-        raise HTTPException(404, "Facture introuvable")
-    tranche = next((t for t in inv.get("payment_tranches", []) if t["id"] == tranche_id), None)
-    if not tranche:
-        raise HTTPException(404, "Tranche introuvable")
-    if tranche["status"] == "paid":
-        raise HTTPException(400, "Cette tranche est déjà payée")
-
-    tx_id = str(uuid.uuid4())
-    now_iso = datetime.now(timezone.utc).isoformat()
-    await db.payment_transactions.insert_one({
-        "id": tx_id, "invoice_id": invoice_id, "tranche_id": tranche_id,
-        "invoice_number": inv["invoice_number"], "tranche_label": tranche["label"],
-        "client_id": inv.get("client_id"), "client_name": inv["client_name"],
-        "amount": float(tranche["amount"]), "currency": "eur",
-        "session_id": f"manual_{tx_id}", "payment_status": "paid",
-        "payment_method": body.payment_method,
-        "created_at": now_iso, "paid_at": now_iso,
-    })
-    await _mark_tranche_paid(invoice_id, tranche_id, payment_method=body.payment_method)
-    return {"message": "Tranche marquée comme payée"}
-
-@api_router.post("/webhook/stripe")
-async def stripe_webhook(request: Request):
-    body = await request.body()
-    sig = request.headers.get("Stripe-Signature", "")
-    settings = await settings_store.get_settings(db)
-    webhook_secret = settings.get("stripe_webhook_secret", "")
-    if not webhook_secret:
-        logger.error("STRIPE_WEBHOOK_SECRET non configuré — webhook ignoré (payload non vérifié)")
-        return {"received": True}
-    try:
-        event = stripe_sdk.Webhook.construct_event(body, sig, webhook_secret)
-        if event.type == "checkout.session.completed":
-            session = event.data.object
-            if session.get("payment_status") == "paid":
-                session_id = session["id"]
-                tx = await db.payment_transactions.find_one({"session_id": session_id})
-                if tx and tx.get("payment_status") != "paid":
-                    await db.payment_transactions.update_one({"session_id": session_id},
-                        {"$set": {"payment_status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}})
-                    await _mark_tranche_paid(tx["invoice_id"], tx["tranche_id"])
-    except Exception as e:
-        logger.error(f"Webhook error: {e}")
-    return {"received": True}
-
-async def _mark_tranche_paid(invoice_id: str, tranche_id: str, payment_method: str = "carte"):
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
-    if not inv:
-        return
-    tranches = inv.get("payment_tranches", [])
-    for t in tranches:
-        if t["id"] == tranche_id:
-            t["status"] = "paid"
-            t["paid_at"] = datetime.now(timezone.utc).isoformat()
-            t["payment_method"] = payment_method
-    all_paid = all(t["status"] == "paid" for t in tranches) if tranches else False
-    any_paid = any(t["status"] == "paid" for t in tranches)
-    new_status = "paid" if all_paid else ("partial" if any_paid else "pending")
-    await db.invoices.update_one({"id": invoice_id}, {"$set": {
-        "payment_tranches": tranches, "status": new_status,
-        "updated_at": datetime.now(timezone.utc).isoformat()}})
-    if all_paid:
-        html = f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-        <div style="background:#D4AF37;padding:20px;text-align:center"><h1 style="color:#000;margin:0">E3C Constructions</h1></div>
-        <div style="padding:30px;background:#f9f9f9">
-          <h2>Paiement complet reçu !</h2>
-          <p>La facture <strong>{inv['invoice_number']}</strong> est entièrement réglée.</p>
-          <p>Client : {inv['client_name']} · Montant : {inv['total_ttc']:.2f} €</p>
-        </div></div>"""
-        await send_email(ADMIN_EMAIL, f"Paiement complet - Facture {inv['invoice_number']}", html)
 
 # ─── Contact (public) ─────────────────────────────────────────────────────────
 @api_router.post("/contact")
@@ -1783,11 +1155,15 @@ def generate_invoice_pdf(inv: dict) -> bytes:
 
 # ─── App config ───────────────────────────────────────────────────────────────
 app.mount("/api/uploads", StaticFiles(directory=str(ROOT_DIR / "uploads")), name="uploads")
+api_router.include_router(auth_routes.router)
+api_router.include_router(payments_routes.router)
+api_router.include_router(admin_routes.router)
 app.include_router(api_router)
 app.add_middleware(CORSMiddleware,
     allow_origins=[FRONTEND_URL, "http://localhost:3000"],
     allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 @app.on_event("shutdown")
-async def shutdown():
-    client.close()
+async def shutdown_db_client():
+    from core import client as _mongo_client
+    _mongo_client.close()

@@ -5,8 +5,11 @@ import os
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
-ADMIN_EMAIL = "admin@e3c-construction.com"
-ADMIN_PASSWORD = "E3C@Admin2026"
+# Read from the environment rather than hardcoding — this used to be the
+# actual literal default password, which was leaked via source control and
+# is now permanently blocked by server.py's require_env() at startup.
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@e3c-construction.com")
+ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
 
 @pytest.fixture(scope="module")
 def admin_session():

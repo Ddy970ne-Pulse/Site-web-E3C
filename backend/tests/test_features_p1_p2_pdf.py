@@ -11,9 +11,12 @@ SESSION = requests.Session()
 
 @pytest.fixture(scope="module", autouse=True)
 def login():
+    # Read from the environment rather than hardcoding — this used to be the
+    # actual literal default password, which was leaked via source control
+    # and is now permanently blocked by server.py's require_env() at startup.
     resp = SESSION.post(f"{BASE_URL}/api/auth/login", json={
-        "email": "admin@e3c-construction.com",
-        "password": "E3C@Admin2026"
+        "email": os.environ.get("ADMIN_EMAIL", "admin@e3c-construction.com"),
+        "password": os.environ["ADMIN_PASSWORD"],
     })
     assert resp.status_code == 200, f"Login failed: {resp.text}"
 
