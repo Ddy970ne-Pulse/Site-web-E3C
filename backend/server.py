@@ -574,6 +574,12 @@ async def submit_contact(form: ContactForm):
     await db.contacts.insert_one({**doc, "_id": doc["id"]})
     return doc
 
+@api_router.get("/contact")
+async def list_contacts(request: Request):
+    await require_admin(request)
+    contacts = await db.contacts.find({}, {"_id": 0}).sort("submitted_at", -1).to_list(500)
+    return contacts
+
 
 @api_router.post("/quote-requests")
 async def create_quote_request(body: QuoteRequestCreate, request: Request):

@@ -30,15 +30,41 @@ def login():
 # ── P1: Quote-request to invoice ──────────────────────────────────────────────
 
 
+def _create_quote_request(suffix):
+    """Creates a fresh quote request via the public endpoint so tests don't
+    depend on hardcoded IDs from old seed data."""
+    resp = SESSION.post(
+        f"{BASE_URL}/api/quote-requests",
+        json={
+            "project_type": "Rénovation",
+            "services": ["Maçonnerie"],
+            "description": f"Test quote request {suffix}",
+            "commune": "Pointe-à-Pitre",
+            "name": f"TEST_QuoteRequest_{suffix}",
+            "email": f"test_qr_{suffix}@example.com",
+        },
+    )
+    assert resp.status_code == 200, f"Quote request creation failed: {resp.text}"
+    return resp.json()["id"]
+
+
 class TestQuoteToInvoice:
     """P1 - Convert quote request to invoice"""
 
-    UNCONVERTED_ID = "3e49b009-5974-4c61-ad9f-1a626de286a5"
-    ALREADY_CONVERTED_ID = "1379a97b-123c-447e-88c2-cfa3ba79e654"
+    @pytest.fixture(scope="class")
+    def unconverted_id(self):
+        return _create_quote_request("unconverted")
 
-    def test_convert_quote_request_creates_invoice(self):
+    @pytest.fixture(scope="class")
+    def already_converted_id(self):
+        req_id = _create_quote_request("already_converted")
+        resp = SESSION.post(f"{BASE_URL}/api/quote-requests/{req_id}/to-invoice")
+        assert resp.status_code == 200, f"Initial conversion failed: {resp.text}"
+        return req_id
+
+    def test_convert_quote_request_creates_invoice(self, unconverted_id):
         resp = SESSION.post(
-            f"{BASE_URL}/api/quote-requests/{self.UNCONVERTED_ID}/to-invoice"
+            f"{BASE_URL}/api/quote-requests/{unconverted_id}/to-invoice"
         )
         assert (
             resp.status_code == 200
@@ -52,20 +78,20 @@ class TestQuoteToInvoice:
         assert isinstance(data.get("payment_tranches", []), list)
         print(f"Created invoice: {data.get('invoice_number')} id={data.get('id')}")
 
-    def test_convert_already_converted_returns_400(self):
+    def test_convert_already_converted_returns_400(self, already_converted_id):
         resp = SESSION.post(
-            f"{BASE_URL}/api/quote-requests/{self.ALREADY_CONVERTED_ID}/to-invoice"
+            f"{BASE_URL}/api/quote-requests/{already_converted_id}/to-invoice"
         )
         assert (
             resp.status_code == 400
         ), f"Expected 400 for already-converted, got {resp.status_code}: {resp.text}"
 
-    def test_converted_request_has_status_converted(self):
+    def test_converted_request_has_status_converted(self, already_converted_id):
         resp = SESSION.get(f"{BASE_URL}/api/quote-requests")
         assert resp.status_code == 200
         requests_list = resp.json()
         converted = next(
-            (r for r in requests_list if r["id"] == self.ALREADY_CONVERTED_ID), None
+            (r for r in requests_list if r["id"] == already_converted_id), None
         )
         assert converted is not None
         assert converted.get("status") == "converted"
@@ -77,10 +103,15 @@ class TestQuoteToInvoice:
 class TestPDFGeneration:
     """PDF endpoints return valid PDF files"""
 
-    INVOICE_ID = "32126de4-a081-42ee-8649-c0f8a70792f9"  # FAC-2026-001
+    @pytest.fixture(scope="class")
+    def invoice_id(self):
+        req_id = _create_quote_request("pdf")
+        resp = SESSION.post(f"{BASE_URL}/api/quote-requests/{req_id}/to-invoice")
+        assert resp.status_code == 200, f"Invoice creation failed: {resp.text}"
+        return resp.json()["id"]
 
-    def test_invoice_pdf_returns_valid(self):
-        resp = SESSION.get(f"{BASE_URL}/api/invoices/{self.INVOICE_ID}/pdf")
+    def test_invoice_pdf_returns_valid(self, invoice_id):
+        resp = SESSION.get(f"{BASE_URL}/api/invoices/{invoice_id}/pdf")
         assert (
             resp.status_code == 200
         ), f"Expected 200, got {resp.status_code}: {resp.text[:200]}"

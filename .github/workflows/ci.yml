@@ -77,23 +77,18 @@ jobs:
           echo "Backend did not become ready in time" >&2
           exit 1
 
-      # A handful of tests in this legacy suite were already broken before this
-      # workflow existed — stale hardcoded quote/invoice IDs from old seed data
-      # (test_features_p1_p2_pdf.py) and one test asserting a public GET
-      # /api/contact listing that was deliberately removed (it would have leaked
-      # every customer's contact submissions). Deselected here as pre-existing,
-      # unrelated issues rather than silently left to make CI red on day one.
+      # test_checkout_requires_tranches needs a real Stripe test-mode secret key
+      # to exercise checkout-session creation; STRIPE_API_KEY isn't set here, so
+      # it 503s ("Paiement par carte non configuré") rather than hitting the
+      # real flow. Deselected as a pre-existing, unrelated gap rather than
+      # silently left to make CI red. Add STRIPE_API_KEY as a secret and drop
+      # this --deselect once a test-mode key is available.
       - name: Run live-integration backend tests
         working-directory: backend
         run: >
           python -m pytest tests/test_e3c.py tests/test_e3c_v2.py tests/test_features_p1_p2_pdf.py
           tests/test_gallery_testimonials.py tests/test_pricing_grid.py -v
-          --deselect tests/test_e3c.py::TestContact::test_get_contacts
           --deselect tests/test_e3c_v2.py::TestPayments::test_checkout_requires_tranches
-          --deselect tests/test_features_p1_p2_pdf.py::TestQuoteToInvoice::test_convert_quote_request_creates_invoice
-          --deselect tests/test_features_p1_p2_pdf.py::TestQuoteToInvoice::test_convert_already_converted_returns_400
-          --deselect tests/test_features_p1_p2_pdf.py::TestQuoteToInvoice::test_converted_request_has_status_converted
-          --deselect tests/test_features_p1_p2_pdf.py::TestPDFGeneration::test_invoice_pdf_returns_valid
 
   frontend:
     runs-on: ubuntu-latest
