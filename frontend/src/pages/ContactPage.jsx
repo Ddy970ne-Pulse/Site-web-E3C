@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
-  Mail, MapPin, Clock, MessageSquare, Send, CheckCircle, AlertCircle
+  MapPin, Clock, MessageSquare, Send, CheckCircle, AlertCircle
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";

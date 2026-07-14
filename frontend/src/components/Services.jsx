@@ -16,7 +16,7 @@ const services = [
   { icon: Zap,        title: "Électricité Générale",       desc: "Installations électriques, tableaux, prises, éclairage." },
 ];
 
-export default function Services({ whatsapp }) {
+export default function Services() {
   const navigate = useNavigate();
 
   return (

@@ -56,6 +56,26 @@ let webpackConfig = {
   },
 };
 
+// Jest doesn't read the webpack `@` alias above, so tests importing via
+// "@/..." (used throughout the app) need it mapped separately here.
+//
+// react-router-dom v7 also needs "^react-router/dom$" mapped explicitly:
+// its main entry does `require("react-router/dom")`, a conditional subpath
+// only resolvable via package.json "exports" — a feature Jest 27 (bundled
+// by react-scripts 5) doesn't support, so it fails with "Cannot find
+// module 'react-router/dom'" on any test that merely imports
+// react-router-dom, mocked or not.
+webpackConfig.jest = {
+  configure: (jestConfig) => {
+    jestConfig.moduleNameMapper = {
+      ...jestConfig.moduleNameMapper,
+      "^@/(.*)$": "<rootDir>/src/$1",
+      "^react-router/dom$": "<rootDir>/node_modules/react-router/dist/development/dom-export.js",
+    };
+    return jestConfig;
+  },
+};
+
 webpackConfig.devServer = (devServerConfig) => {
   // Add health check endpoints if enabled
   if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {

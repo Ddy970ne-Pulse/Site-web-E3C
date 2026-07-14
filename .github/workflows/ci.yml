@@ -89,7 +89,7 @@ jobs:
           --deselect tests/test_features_p1_p2_pdf.py::TestQuoteToInvoice::test_converted_request_has_status_converted
           --deselect tests/test_features_p1_p2_pdf.py::TestPDFGeneration::test_invoice_pdf_returns_valid
 
-  frontend-build:
+  frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -103,6 +103,16 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Run frontend tests
+        working-directory: frontend
+        env:
+          CI: true
+        run: npx craco test --watchAll=false
 
       - name: Build frontend
         working-directory: frontend

@@ -31,7 +31,7 @@ export default function ClientDashboard() {
   const [quotes, setQuotes] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [selectedQuote, setSelectedQuote] = useState(null);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [, setSelectedInvoice] = useState(null);
   const [paymentMsg, setPaymentMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);

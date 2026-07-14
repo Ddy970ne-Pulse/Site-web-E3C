@@ -4,7 +4,6 @@ import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { ChevronRight, ChevronLeft, CheckCircle, Building2, Home, Layers, Hammer, PaintBucket, Wrench, Zap, Droplets, Trees, HelpCircle, Check, Loader, Info } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { SEO } from "@/components/SEO";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;

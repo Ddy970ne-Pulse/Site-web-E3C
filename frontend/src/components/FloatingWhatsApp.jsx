@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { X, MessageCircle } from "lucide-react";
 
 export default function FloatingWhatsApp({ whatsapp }) {
   const [tooltip, setTooltip] = useState(false);

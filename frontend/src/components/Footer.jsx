@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, User, LogIn, Scale } from "lucide-react";
+import { MapPin, User, LogIn } from "lucide-react";
 
 const WHATSAPP_SVG = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
