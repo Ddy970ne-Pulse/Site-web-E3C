@@ -1,11 +1,11 @@
 import { useState } from "react";
 import axios from "axios";
 import { Plus, Trash2, Save, X } from "lucide-react";
+import { TVA_STANDARD, TVA_RATE_OPTIONS, suggestTvaRate } from "@/lib/tva";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const TVA_DEFAULT = 8.5;
 
-const emptyItem = () => ({ description: "", quantity: 1, unit_price: 0, tva_rate: TVA_DEFAULT });
+const emptyItem = () => ({ description: "", quantity: 1, unit_price: 0, tva_rate: TVA_STANDARD });
 
 export default function QuoteForm({ clients, quote, onSaved, onCancel }) {
   const [form, setForm] = useState({
@@ -20,9 +20,17 @@ export default function QuoteForm({ clients, quote, onSaved, onCancel }) {
   const [loading, setLoading] = useState(false);
 
   const setField = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  // La description détermine le taux de TVA suggéré (8,5% normal vs 2,1%
+  // réduit pour la rénovation énergétique — voir lib/tva.js) : recalculée à
+  // chaque modification de la description, mais un choix manuel dans le menu
+  // TVA n'est jamais écrasé tant que la description ne change pas ensuite.
   const setItem = (i, k, v) => {
     const items = [...form.line_items];
-    items[i] = { ...items[i], [k]: k === "description" ? v : parseFloat(v) || 0 };
+    const next = { ...items[i], [k]: k === "description" ? v : parseFloat(v) || 0 };
+    if (k === "description") {
+      next.tva_rate = suggestTvaRate({ description: v });
+    }
+    items[i] = next;
     setForm(p => ({ ...p, line_items: items }));
   };
   const addItem = () => setForm(p => ({ ...p, line_items: [...p.line_items, emptyItem()] }));
@@ -111,9 +119,10 @@ export default function QuoteForm({ clients, quote, onSaved, onCancel }) {
                     className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 text-sm rounded-sm" />
                 </div>
                 <div className="col-span-3 md:col-span-2">
-                  <input type="number" placeholder="TVA%" value={item.tva_rate} min="0" step="0.1"
-                    onChange={e => setItem(i, "tva_rate", e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 text-sm rounded-sm" />
+                  <select value={item.tva_rate} onChange={e => setItem(i, "tva_rate", e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 text-sm rounded-sm">
+                    {TVA_RATE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.value} %</option>)}
+                  </select>
                 </div>
                 <div className="col-span-1 flex justify-end">
                   {form.line_items.length > 1 && (

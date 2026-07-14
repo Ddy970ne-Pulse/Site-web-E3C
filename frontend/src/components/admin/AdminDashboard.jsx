@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Users, FileText, Receipt, CreditCard, Plus, LogOut, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Eye, Send, RefreshCw, TrendingUp, Inbox, Image, MessageSquare, Trash2, Upload, Activity, Settings } from "lucide-react";
+import { Users, FileText, Receipt, CreditCard, Plus, LogOut, CheckCircle, XCircle, Eye, Send, TrendingUp, Inbox, Image, MessageSquare, Trash2, Upload, Activity, Settings } from "lucide-react";
 import QuoteForm from "@/components/admin/QuoteForm";
 import InvoiceDetail from "@/components/admin/InvoiceDetail";
 import DiagnosticsPanel from "@/components/admin/DiagnosticsPanel";
 import SettingsPanel from "@/components/admin/SettingsPanel";
+import { TVA_STANDARD, TVA_RATE_OPTIONS, suggestTvaRate } from "@/lib/tva";
+import { DESCRIPTION_SUGGESTIONS_BY_CATEGORY } from "@/lib/pricingDescriptions";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ax = () => axios.create({ withCredentials: true });
@@ -41,17 +43,27 @@ function StatCard({ icon: Icon, label, value, color = "text-[#D4AF37]" }) {
 
 const PRICING_UNITS = ["m²", "ml", "m³", "pièce", "heure", "forfait", "jour", "kg", "sac"];
 const PRICING_CATEGORIES = ["Maçonnerie", "Toiture", "Rénovation", "Peinture", "Carrelage", "Charpente", "Terrassement", "Plomberie", "Électricité", "Divers"];
-const TVA_DOM = 8.5;
 
 function PricingTab({ items, onRefresh }) {
-  const EMPTY = { category: "Maçonnerie", description: "", unit: "m²", unit_price_ht: "", tva_rate: TVA_DOM, active: true };
+  const EMPTY = { category: "Maçonnerie", description: "", unit: "m²", unit_price_ht: "", tva_rate: TVA_STANDARD, active: true };
   const [form, setForm] = useState(EMPTY);
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [filterCat, setFilterCat] = useState("Tout");
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  // La catégorie/description détermine le taux de TVA applicable (8,5% normal
+  // vs 2,1% réduit pour la rénovation énergétique) — voir lib/tva.js. Suggestion
+  // auto-remplie à chaque changement de ces deux champs, mais le menu TVA reste
+  // librement modifiable ensuite : un choix manuel n'est jamais écrasé tant que
+  // la catégorie/description ne change pas à nouveau.
+  const set = (k, v) => setForm(f => {
+    const next = { ...f, [k]: v };
+    if (k === "category" || k === "description") {
+      next.tva_rate = suggestTvaRate({ category: next.category, description: next.description });
+    }
+    return next;
+  });
 
   const save = async e => {
     e.preventDefault();
@@ -115,7 +127,16 @@ function PricingTab({ items, onRefresh }) {
               <label className="text-sm text-gray-500 uppercase tracking-widest mb-1.5 block">Description *</label>
               <input value={form.description} onChange={e => set("description", e.target.value)}
                 placeholder="Ex : Mur en agglos 15cm, Peinture façade acrylique…"
+                list="pricing-description-suggestions"
                 className="w-full bg-[#0A0A0A] border border-white/10 text-white text-base px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-description" />
+              <datalist id="pricing-description-suggestions">
+                {(DESCRIPTION_SUGGESTIONS_BY_CATEGORY[form.category] || []).map(d => (
+                  <option key={d} value={d} />
+                ))}
+              </datalist>
+              <p className="text-sm text-gray-600 mt-1">
+                Suggestions pour « {form.category} » — les postes de rénovation énergétique basculent automatiquement la TVA à 2,1 %.
+              </p>
             </div>
             <div>
               <label className="text-sm text-gray-500 uppercase tracking-widest mb-1.5 block">Unité *</label>
@@ -131,9 +152,12 @@ function PricingTab({ items, onRefresh }) {
                 className="w-full bg-[#0A0A0A] border border-white/10 text-white text-base px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" data-testid="pricing-price" />
             </div>
             <div>
-              <label className="text-sm text-gray-500 uppercase tracking-widest mb-1.5 block">TVA (%)</label>
-              <input type="number" min="0" max="100" step="0.5" value={form.tva_rate} onChange={e => set("tva_rate", parseFloat(e.target.value))}
-                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-base px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40" />
+              <label className="text-sm text-gray-500 uppercase tracking-widest mb-1.5 block">TVA</label>
+              <select value={form.tva_rate} onChange={e => set("tva_rate", parseFloat(e.target.value))}
+                data-testid="pricing-tva-rate"
+                className="w-full bg-[#0A0A0A] border border-white/10 text-white text-base px-3 py-2.5 rounded-sm focus:outline-none focus:border-[#D4AF37]/40">
+                {TVA_RATE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -413,7 +437,7 @@ export default function AdminDashboard() {
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [editQuote, setEditQuote] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [convertingId, setConvertingId] = useState(null);
 
   const fetchAll = async () => {
