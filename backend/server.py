@@ -6,27 +6,37 @@ quotes, invoices (CRUD/PDF — payment execution is in payments_routes.py),
 public contact form, quote requests, gallery, testimonials, and the pricing
 grid.
 """
+
 import asyncio
 import io
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import (APIRouter, FastAPI, File, Form, HTTPException, Request,
-                      UploadFile)
+import stripe as stripe_sdk
+from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from starlette.middleware.cors import CORSMiddleware
 
 import diagnostics
 import settings_store
-import stripe as stripe_sdk
-from core import (ADMIN_EMAIL, FRONTEND_URL, ROOT_DIR, UPLOADS_DIR, db,
-                   get_current_user, limiter, logger, require_admin,
-                   seed_admin, send_email)
+from core import (
+    ADMIN_EMAIL,
+    FRONTEND_URL,
+    ROOT_DIR,
+    UPLOADS_DIR,
+    db,
+    get_current_user,
+    limiter,
+    logger,
+    require_admin,
+    seed_admin,
+    send_email,
+)
 from routers import admin_routes, auth_routes, payments_routes
 
 app = FastAPI(title="E3C API")
@@ -44,11 +54,17 @@ class LineItem(BaseModel):
     tva_rate: float = 8.5
 
     @property
-    def total_ht(self): return round(self.quantity * self.unit_price, 2)
+    def total_ht(self):
+        return round(self.quantity * self.unit_price, 2)
+
     @property
-    def total_tva(self): return round(self.total_ht * self.tva_rate / 100, 2)
+    def total_tva(self):
+        return round(self.total_ht * self.tva_rate / 100, 2)
+
     @property
-    def total_ttc(self): return round(self.total_ht + self.total_tva, 2)
+    def total_ttc(self):
+        return round(self.total_ht + self.total_tva, 2)
+
 
 class QuoteCreate(BaseModel):
     client_id: str
@@ -58,6 +74,7 @@ class QuoteCreate(BaseModel):
     notes: Optional[str] = ""
     client_address: Optional[str] = ""
 
+
 class QuoteUpdate(BaseModel):
     project_description: Optional[str] = None
     line_items: Optional[List[LineItem]] = None
@@ -66,8 +83,10 @@ class QuoteUpdate(BaseModel):
     client_address: Optional[str] = None
     admin_notes: Optional[str] = None
 
+
 class QuoteRefuse(BaseModel):
     reason: Optional[str] = ""
+
 
 class PaymentTranche(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -78,8 +97,10 @@ class PaymentTranche(BaseModel):
     paid_at: Optional[str] = None
     stripe_session_id: Optional[str] = None
 
+
 class InvoiceTranchesUpdate(BaseModel):
     tranches: List[PaymentTranche]
+
 
 class ContactForm(BaseModel):
     name: str
@@ -88,6 +109,7 @@ class ContactForm(BaseModel):
     service: str
     message: Optional[str] = ""
 
+
 class QuoteLineItem(BaseModel):
     pricing_item_id: Optional[str] = ""
     description: str
@@ -95,6 +117,7 @@ class QuoteLineItem(BaseModel):
     unit_price_ht: float
     tva_rate: float = 8.5
     quantity: float
+
 
 class QuoteRequestCreate(BaseModel):
     project_type: str
@@ -112,6 +135,7 @@ class QuoteRequestCreate(BaseModel):
     estimated_total_ht: Optional[float] = 0.0
     estimated_total_ttc: Optional[float] = 0.0
 
+
 class TestimonialCreate(BaseModel):
     name: str
     commune: Optional[str] = ""
@@ -120,17 +144,20 @@ class TestimonialCreate(BaseModel):
     text: str
     email: Optional[str] = ""
 
+
 class GalleryImageMeta(BaseModel):
     label: str
     category: str  # Maçonnerie | Toiture | Rénovation | Peinture | Carrelage
 
+
 class PricingItemCreate(BaseModel):
     category: str
     description: str
-    unit: str           # m², ml, m³, pièce, heure, forfait, jour
+    unit: str  # m², ml, m³, pièce, heure, forfait, jour
     unit_price_ht: float
     tva_rate: float = 8.5
     active: bool = True
+
 
 class PricingItemUpdate(BaseModel):
     category: Optional[str] = None
@@ -139,6 +166,7 @@ class PricingItemUpdate(BaseModel):
     unit_price_ht: Optional[float] = None
     tva_rate: Optional[float] = None
     active: Optional[bool] = None
+
 
 # ─── Startup ────────────────────────────────────────────────────────────────
 @app.on_event("startup")
@@ -151,10 +179,17 @@ async def startup():
     await db.invoices.create_index("client_id")
     await db.payment_transactions.create_index("session_id")
     await seed_admin()
-    app.state.auto_fix_task = asyncio.create_task(diagnostics.periodic_auto_fix_loop(
-        db, stripe_sdk=stripe_sdk, uploads_dir=UPLOADS_DIR,
-        get_settings=settings_store.get_settings, send_alert=send_email, admin_email=ADMIN_EMAIL,
-    ))
+    app.state.auto_fix_task = asyncio.create_task(
+        diagnostics.periodic_auto_fix_loop(
+            db,
+            stripe_sdk=stripe_sdk,
+            uploads_dir=UPLOADS_DIR,
+            get_settings=settings_store.get_settings,
+            send_alert=send_email,
+            admin_email=ADMIN_EMAIL,
+        )
+    )
+
 
 @app.on_event("shutdown")
 async def shutdown_auto_fix():
@@ -162,16 +197,23 @@ async def shutdown_auto_fix():
     if task:
         task.cancel()
 
+
 # ─── Quote number / Invoice number generators ──────────────────────────────
 async def next_quote_number() -> str:
     year = datetime.now().year
-    count = await db.quotes.count_documents({"quote_number": {"$regex": f"^DEV-{year}-"}})
+    count = await db.quotes.count_documents(
+        {"quote_number": {"$regex": f"^DEV-{year}-"}}
+    )
     return f"DEV-{year}-{str(count + 1).zfill(3)}"
+
 
 async def next_invoice_number() -> str:
     year = datetime.now().year
-    count = await db.invoices.count_documents({"invoice_number": {"$regex": f"^FAC-{year}-"}})
+    count = await db.invoices.count_documents(
+        {"invoice_number": {"$regex": f"^FAC-{year}-"}}
+    )
     return f"FAC-{year}-{str(count + 1).zfill(3)}"
+
 
 # ─── Quote Routes ────────────────────────────────────────────────────────────
 @api_router.get("/quotes")
@@ -180,6 +222,7 @@ async def list_quotes(request: Request):
     query = {} if user["role"] == "admin" else {"client_id": user["id"]}
     quotes = await db.quotes.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
     return quotes
+
 
 @api_router.post("/quotes")
 async def create_quote(body: QuoteCreate, request: Request):
@@ -197,19 +240,29 @@ async def create_quote(body: QuoteCreate, request: Request):
     total_ttc = round(total_ht + total_tva, 2)
     qnum = await next_quote_number()
     doc = {
-        "id": str(uuid.uuid4()), "quote_number": qnum,
-        "client_id": body.client_id, "client_name": client_user["name"],
-        "client_email": client_user["email"], "client_phone": client_user.get("phone", ""),
+        "id": str(uuid.uuid4()),
+        "quote_number": qnum,
+        "client_id": body.client_id,
+        "client_name": client_user["name"],
+        "client_email": client_user["email"],
+        "client_phone": client_user.get("phone", ""),
         "client_address": body.client_address,
         "project_description": body.project_description,
-        "line_items": items, "total_ht": total_ht, "total_tva": total_tva, "total_ttc": total_ttc,
-        "status": "draft", "valid_until": body.valid_until, "notes": body.notes,
-        "admin_notes": "", "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat()
+        "line_items": items,
+        "total_ht": total_ht,
+        "total_tva": total_tva,
+        "total_ttc": total_ttc,
+        "status": "draft",
+        "valid_until": body.valid_until,
+        "notes": body.notes,
+        "admin_notes": "",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.quotes.insert_one(doc)
     doc.pop("_id", None)
     return doc
+
 
 @api_router.get("/quotes/{quote_id}")
 async def get_quote(quote_id: str, request: Request):
@@ -220,6 +273,7 @@ async def get_quote(quote_id: str, request: Request):
     if user["role"] == "client" and q["client_id"] != user["id"]:
         raise HTTPException(403, "Accès refusé")
     return q
+
 
 @api_router.put("/quotes/{quote_id}")
 async def update_quote(quote_id: str, body: QuoteUpdate, request: Request):
@@ -240,12 +294,17 @@ async def update_quote(quote_id: str, body: QuoteUpdate, request: Request):
         update["total_ht"] = round(sum(i["total_ht"] for i in items), 2)
         update["total_tva"] = round(sum(i["total_tva"] for i in items), 2)
         update["total_ttc"] = round(update["total_ht"] + update["total_tva"], 2)
-    if body.valid_until is not None: update["valid_until"] = body.valid_until
-    if body.notes is not None: update["notes"] = body.notes
-    if body.client_address is not None: update["client_address"] = body.client_address
-    if body.admin_notes is not None: update["admin_notes"] = body.admin_notes
+    if body.valid_until is not None:
+        update["valid_until"] = body.valid_until
+    if body.notes is not None:
+        update["notes"] = body.notes
+    if body.client_address is not None:
+        update["client_address"] = body.client_address
+    if body.admin_notes is not None:
+        update["admin_notes"] = body.admin_notes
     await db.quotes.update_one({"id": quote_id}, {"$set": update})
     return await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+
 
 @api_router.post("/quotes/{quote_id}/send")
 async def send_quote(quote_id: str, request: Request):
@@ -253,8 +312,15 @@ async def send_quote(quote_id: str, request: Request):
     q = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
     if not q:
         raise HTTPException(404, "Devis introuvable")
-    await db.quotes.update_one({"id": quote_id}, {"$set": {"status": "sent",
-        "updated_at": datetime.now(timezone.utc).isoformat()}})
+    await db.quotes.update_one(
+        {"id": quote_id},
+        {
+            "$set": {
+                "status": "sent",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
     # Send email notification
     html = f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
     <div style="background:#D4AF37;padding:20px;text-align:center">
@@ -272,8 +338,11 @@ async def send_quote(quote_id: str, request: Request):
       </div>
       <p style="color:#666;font-size:12px">E3C Constructions · Guadeloupe · 0690 44 97 14</p>
     </div></div>"""
-    await send_email(q["client_email"], f"Votre devis {q['quote_number']} est prêt - E3C", html)
+    await send_email(
+        q["client_email"], f"Votre devis {q['quote_number']} est prêt - E3C", html
+    )
     return {"message": "Devis envoyé au client"}
+
 
 @api_router.post("/quotes/{quote_id}/accept")
 async def accept_quote(quote_id: str, request: Request):
@@ -284,10 +353,20 @@ async def accept_quote(quote_id: str, request: Request):
     if user["role"] == "client" and q["client_id"] != user["id"]:
         raise HTTPException(403, "Accès refusé")
     if q["status"] != "sent":
-        raise HTTPException(400, "Ce devis ne peut pas être accepté dans son état actuel")
-    await db.quotes.update_one({"id": quote_id}, {"$set": {
-        "status": "accepted", "signed_at": datetime.now(timezone.utc).isoformat(),
-        "signed_by": user["name"], "updated_at": datetime.now(timezone.utc).isoformat()}})
+        raise HTTPException(
+            400, "Ce devis ne peut pas être accepté dans son état actuel"
+        )
+    await db.quotes.update_one(
+        {"id": quote_id},
+        {
+            "$set": {
+                "status": "accepted",
+                "signed_at": datetime.now(timezone.utc).isoformat(),
+                "signed_by": user["name"],
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
     html = f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
     <div style="background:#D4AF37;padding:20px;text-align:center">
       <h1 style="color:#000;margin:0">E3C Constructions</h1>
@@ -298,8 +377,11 @@ async def accept_quote(quote_id: str, request: Request):
       <p>Montant : <strong>{q['total_ttc']:.2f} €</strong></p>
       <p>Vous pouvez maintenant convertir ce devis en facture.</p>
     </div></div>"""
-    await send_email(ADMIN_EMAIL, f"Devis {q['quote_number']} accepté par {q['client_name']}", html)
+    await send_email(
+        ADMIN_EMAIL, f"Devis {q['quote_number']} accepté par {q['client_name']}", html
+    )
     return {"message": "Devis accepté (bon pour accord)"}
+
 
 @api_router.post("/quotes/{quote_id}/refuse")
 async def refuse_quote(quote_id: str, body: QuoteRefuse, request: Request):
@@ -309,10 +391,18 @@ async def refuse_quote(quote_id: str, body: QuoteRefuse, request: Request):
         raise HTTPException(404, "Devis introuvable")
     if user["role"] == "client" and q["client_id"] != user["id"]:
         raise HTTPException(403, "Accès refusé")
-    await db.quotes.update_one({"id": quote_id}, {"$set": {
-        "status": "refused", "refusal_reason": body.reason,
-        "updated_at": datetime.now(timezone.utc).isoformat()}})
+    await db.quotes.update_one(
+        {"id": quote_id},
+        {
+            "$set": {
+                "status": "refused",
+                "refusal_reason": body.reason,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
     return {"message": "Devis refusé"}
+
 
 @api_router.post("/quotes/{quote_id}/convert")
 async def convert_to_invoice(quote_id: str, request: Request):
@@ -324,19 +414,36 @@ async def convert_to_invoice(quote_id: str, request: Request):
         raise HTTPException(400, "Seuls les devis acceptés peuvent être convertis")
     inv_num = await next_invoice_number()
     inv = {
-        "id": str(uuid.uuid4()), "invoice_number": inv_num, "quote_id": quote_id,
-        "quote_number": q["quote_number"], "client_id": q["client_id"],
-        "client_name": q["client_name"], "client_email": q["client_email"],
-        "client_phone": q["client_phone"], "client_address": q.get("client_address", ""),
-        "project_description": q["project_description"], "line_items": q["line_items"],
-        "total_ht": q["total_ht"], "total_tva": q["total_tva"], "total_ttc": q["total_ttc"],
-        "status": "pending", "payment_tranches": [],
+        "id": str(uuid.uuid4()),
+        "invoice_number": inv_num,
+        "quote_id": quote_id,
+        "quote_number": q["quote_number"],
+        "client_id": q["client_id"],
+        "client_name": q["client_name"],
+        "client_email": q["client_email"],
+        "client_phone": q["client_phone"],
+        "client_address": q.get("client_address", ""),
+        "project_description": q["project_description"],
+        "line_items": q["line_items"],
+        "total_ht": q["total_ht"],
+        "total_tva": q["total_tva"],
+        "total_ttc": q["total_ttc"],
+        "status": "pending",
+        "payment_tranches": [],
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat()
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.invoices.insert_one(inv)
-    await db.quotes.update_one({"id": quote_id}, {"$set": {"status": "converted",
-        "invoice_id": inv["id"], "updated_at": datetime.now(timezone.utc).isoformat()}})
+    await db.quotes.update_one(
+        {"id": quote_id},
+        {
+            "$set": {
+                "status": "converted",
+                "invoice_id": inv["id"],
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
     inv.pop("_id", None)
     # Notify client
     html = f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
@@ -351,8 +458,11 @@ async def convert_to_invoice(quote_id: str, request: Request):
         Voir ma facture
       </a>
     </div></div>"""
-    await send_email(q["client_email"], f"Votre facture {inv_num} - E3C Constructions", html)
+    await send_email(
+        q["client_email"], f"Votre facture {inv_num} - E3C Constructions", html
+    )
     return inv
+
 
 @api_router.get("/quotes/{quote_id}/pdf")
 async def download_quote_pdf(quote_id: str, request: Request):
@@ -363,8 +473,14 @@ async def download_quote_pdf(quote_id: str, request: Request):
     if user["role"] == "client" and q["client_id"] != user["id"]:
         raise HTTPException(403, "Accès refusé")
     pdf_bytes = generate_quote_pdf(q)
-    return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={q['quote_number']}.pdf"})
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={q['quote_number']}.pdf"
+        },
+    )
+
 
 # ─── Invoice Routes ───────────────────────────────────────────────────────────
 @api_router.get("/invoices")
@@ -373,6 +489,7 @@ async def list_invoices(request: Request):
     query = {} if user["role"] == "admin" else {"client_id": user["id"]}
     invs = await db.invoices.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
     return invs
+
 
 @api_router.get("/invoices/{invoice_id}")
 async def get_invoice(invoice_id: str, request: Request):
@@ -384,8 +501,11 @@ async def get_invoice(invoice_id: str, request: Request):
         raise HTTPException(403, "Accès refusé")
     return inv
 
+
 @api_router.put("/invoices/{invoice_id}/tranches")
-async def set_invoice_tranches(invoice_id: str, body: InvoiceTranchesUpdate, request: Request):
+async def set_invoice_tranches(
+    invoice_id: str, body: InvoiceTranchesUpdate, request: Request
+):
     await require_admin(request)
     inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not inv:
@@ -393,9 +513,19 @@ async def set_invoice_tranches(invoice_id: str, body: InvoiceTranchesUpdate, req
     tranches = [t.model_dump() for t in body.tranches]
     total_tranches = sum(t["amount"] for t in tranches)
     if abs(total_tranches - inv["total_ttc"]) > 0.01:
-        raise HTTPException(400, f"Le total des tranches ({total_tranches:.2f}€) doit correspondre au total TTC ({inv['total_ttc']:.2f}€)")
-    await db.invoices.update_one({"id": invoice_id}, {"$set": {
-        "payment_tranches": tranches, "updated_at": datetime.now(timezone.utc).isoformat()}})
+        raise HTTPException(
+            400,
+            f"Le total des tranches ({total_tranches:.2f}€) doit correspondre au total TTC ({inv['total_ttc']:.2f}€)",
+        )
+    await db.invoices.update_one(
+        {"id": invoice_id},
+        {
+            "$set": {
+                "payment_tranches": tranches,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
     # Send notification to client
     html = f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
     <div style="background:#D4AF37;padding:20px;text-align:center">
@@ -409,9 +539,13 @@ async def set_invoice_tranches(invoice_id: str, body: InvoiceTranchesUpdate, req
         Accéder à mes paiements
       </a>
     </div></div>"""
-    await send_email(inv["client_email"],
-        f"Calendrier de règlement - Facture {inv['invoice_number']}", html)
+    await send_email(
+        inv["client_email"],
+        f"Calendrier de règlement - Facture {inv['invoice_number']}",
+        html,
+    )
     return await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+
 
 @api_router.get("/invoices/{invoice_id}/pdf")
 async def download_invoice_pdf(invoice_id: str, request: Request):
@@ -422,8 +556,14 @@ async def download_invoice_pdf(invoice_id: str, request: Request):
     if user["role"] == "client" and inv["client_id"] != user["id"]:
         raise HTTPException(403, "Accès refusé")
     pdf_bytes = generate_invoice_pdf(inv)
-    return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={inv['invoice_number']}.pdf"})
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={inv['invoice_number']}.pdf"
+        },
+    )
+
 
 # ─── Contact (public) ─────────────────────────────────────────────────────────
 @api_router.post("/contact")
@@ -433,6 +573,7 @@ async def submit_contact(form: ContactForm):
     doc["submitted_at"] = datetime.now(timezone.utc).isoformat()
     await db.contacts.insert_one({**doc, "_id": doc["id"]})
     return doc
+
 
 @api_router.post("/quote-requests")
 async def create_quote_request(body: QuoteRequestCreate, request: Request):
@@ -476,18 +617,25 @@ async def create_quote_request(body: QuoteRequestCreate, request: Request):
     await send_email(ADMIN_EMAIL, f"Nouvelle demande de devis — {body.name}", html)
     return doc
 
+
 @api_router.get("/quote-requests")
 async def list_quote_requests(request: Request):
     await require_admin(request)
-    requests_list = await db.quote_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    requests_list = (
+        await db.quote_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    )
     return requests_list
+
 
 @api_router.put("/quote-requests/{req_id}/status")
 async def update_quote_request_status(req_id: str, request: Request):
     await require_admin(request)
     body = await request.json()
-    await db.quote_requests.update_one({"id": req_id}, {"$set": {"status": body.get("status", "viewed")}})
+    await db.quote_requests.update_one(
+        {"id": req_id}, {"$set": {"status": body.get("status", "viewed")}}
+    )
     return {"message": "Statut mis à jour"}
+
 
 @api_router.post("/quote-requests/{req_id}/to-invoice")
 async def convert_quote_request_to_invoice(req_id: str, request: Request):
@@ -505,58 +653,66 @@ async def convert_quote_request_to_invoice(req_id: str, request: Request):
 
     if raw_items:
         for li in raw_items:
-            qty   = float(li.get("quantity", 1))
+            qty = float(li.get("quantity", 1))
             price = float(li.get("unit_price_ht", 0))
-            tva   = float(li.get("tva_rate", 8.5))
-            ht    = round(qty * price, 2)
-            t_    = round(ht * tva / 100, 2)
-            ttc   = round(ht + t_, 2)
-            items.append({
-                "description": li.get("description", ""),
-                "quantity": qty,
-                "unit_price": price,
-                "unit": li.get("unit", "forfait"),
-                "tva_rate": tva,
-                "total_ht": ht,
-                "total_tva": t_,
-                "total_ttc": ttc,
-            })
-            total_ht  += ht
+            tva = float(li.get("tva_rate", 8.5))
+            ht = round(qty * price, 2)
+            t_ = round(ht * tva / 100, 2)
+            ttc = round(ht + t_, 2)
+            items.append(
+                {
+                    "description": li.get("description", ""),
+                    "quantity": qty,
+                    "unit_price": price,
+                    "unit": li.get("unit", "forfait"),
+                    "tva_rate": tva,
+                    "total_ht": ht,
+                    "total_tva": t_,
+                    "total_ttc": ttc,
+                }
+            )
+            total_ht += ht
             total_tva += t_
     else:
-        est_ht  = float(qr.get("estimated_total_ht", 0) or 0)
+        est_ht = float(qr.get("estimated_total_ht", 0) or 0)
         est_ttc = float(qr.get("estimated_total_ttc", 0) or 0)
         if est_ht > 0:
-            total_ht  = est_ht
+            total_ht = est_ht
             total_tva = round(est_ttc - est_ht, 2)
-            items = [{
-                "description": f'{qr.get("project_type","Travaux")} — {qr.get("description","")}',
-                "quantity": 1.0,
-                "unit_price": est_ht,
-                "unit": "forfait",
-                "tva_rate": 8.5,
-                "total_ht": est_ht,
-                "total_tva": round(est_ttc - est_ht, 2),
-                "total_ttc": est_ttc,
-            }]
+            items = [
+                {
+                    "description": f'{qr.get("project_type","Travaux")} — {qr.get("description","")}',
+                    "quantity": 1.0,
+                    "unit_price": est_ht,
+                    "unit": "forfait",
+                    "tva_rate": 8.5,
+                    "total_ht": est_ht,
+                    "total_tva": round(est_ttc - est_ht, 2),
+                    "total_ttc": est_ttc,
+                }
+            ]
         else:
-            items = [{
-                "description": f'{qr.get("project_type","Travaux")} — {qr.get("description","")}',
-                "quantity": 1.0,
-                "unit_price": 0.0,
-                "unit": "forfait",
-                "tva_rate": 8.5,
-                "total_ht": 0.0,
-                "total_tva": 0.0,
-                "total_ttc": 0.0,
-            }]
+            items = [
+                {
+                    "description": f'{qr.get("project_type","Travaux")} — {qr.get("description","")}',
+                    "quantity": 1.0,
+                    "unit_price": 0.0,
+                    "unit": "forfait",
+                    "tva_rate": 8.5,
+                    "total_ht": 0.0,
+                    "total_tva": 0.0,
+                    "total_ttc": 0.0,
+                }
+            ]
 
-    total_ht  = round(total_ht, 2)
+    total_ht = round(total_ht, 2)
     total_tva = round(total_tva, 2)
     total_ttc = round(total_ht + total_tva, 2)
 
-    inv_num   = await next_invoice_number()
-    raw_desc  = f'{qr.get("project_type","").strip()} — {qr.get("description","").strip()}'
+    inv_num = await next_invoice_number()
+    raw_desc = (
+        f'{qr.get("project_type","").strip()} — {qr.get("description","").strip()}'
+    )
     proj_desc = raw_desc.strip(" —").strip()
 
     inv_doc = {
@@ -581,10 +737,15 @@ async def convert_quote_request_to_invoice(req_id: str, request: Request):
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.invoices.insert_one(inv_doc)
-    await db.quote_requests.update_one({"id": req_id}, {"$set": {
-        "status": "converted",
-        "invoice_id": inv_doc["id"],
-    }})
+    await db.quote_requests.update_one(
+        {"id": req_id},
+        {
+            "$set": {
+                "status": "converted",
+                "invoice_id": inv_doc["id"],
+            }
+        },
+    )
     inv_doc.pop("_id", None)
 
     if inv_doc.get("client_email"):
@@ -600,17 +761,24 @@ async def convert_quote_request_to_invoice(req_id: str, request: Request):
             Voir ma facture
           </a>
         </div></div>"""
-        await send_email(inv_doc["client_email"], f"Votre facture {inv_num} - E3C Constructions", html)
+        await send_email(
+            inv_doc["client_email"],
+            f"Votre facture {inv_num} - E3C Constructions",
+            html,
+        )
 
     return inv_doc
+
 
 @api_router.get("/")
 async def root():
     return {"message": "E3C API v2.0 - Devis & Factures"}
 
+
 # ─── Gallery ─────────────────────────────────────────────────────────────────
 ALLOWED_IMG = {"image/jpeg", "image/png", "image/webp"}
 MAX_SIZE_MB = 10
+
 
 @api_router.post("/gallery")
 async def upload_gallery_image(
@@ -641,10 +809,12 @@ async def upload_gallery_image(
     await db.gallery.insert_one({**doc, "_id": doc["id"]})
     return doc
 
+
 @api_router.get("/gallery")
 async def list_gallery():
     imgs = await db.gallery.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
     return imgs
+
 
 @api_router.delete("/gallery/{img_id}")
 async def delete_gallery_image(img_id: str, request: Request):
@@ -658,6 +828,7 @@ async def delete_gallery_image(img_id: str, request: Request):
         pass
     await db.gallery.delete_one({"id": img_id})
     return {"message": "Image supprimée"}
+
 
 # ─── Testimonials ─────────────────────────────────────────────────────────────
 @api_router.post("/testimonials")
@@ -679,18 +850,30 @@ async def submit_testimonial(body: TestimonialCreate):
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.testimonials.insert_one({**doc, "_id": doc["id"]})
-    return {"message": "Témoignage soumis. Il sera publié après validation.", "id": doc["id"]}
+    return {
+        "message": "Témoignage soumis. Il sera publié après validation.",
+        "id": doc["id"],
+    }
+
 
 @api_router.get("/testimonials")
 async def list_testimonials():
-    docs = await db.testimonials.find({"status": "approved"}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    docs = (
+        await db.testimonials.find({"status": "approved"}, {"_id": 0})
+        .sort("created_at", -1)
+        .to_list(50)
+    )
     return docs
+
 
 @api_router.get("/testimonials/admin")
 async def list_testimonials_admin(request: Request):
     await require_admin(request)
-    docs = await db.testimonials.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    docs = (
+        await db.testimonials.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    )
     return docs
+
 
 @api_router.patch("/testimonials/{t_id}")
 async def update_testimonial_status(t_id: str, request: Request):
@@ -702,11 +885,17 @@ async def update_testimonial_status(t_id: str, request: Request):
     await db.testimonials.update_one({"id": t_id}, {"$set": {"status": status}})
     return {"message": "Statut mis à jour"}
 
+
 # ─── Pricing Grid ──────────────────────────────────────────────────────────────
 @api_router.get("/pricing-grid")
 async def list_pricing():
-    items = await db.pricing_grid.find({}, {"_id": 0}).sort([("category", 1), ("description", 1)]).to_list(500)
+    items = (
+        await db.pricing_grid.find({}, {"_id": 0})
+        .sort([("category", 1), ("description", 1)])
+        .to_list(500)
+    )
     return items
+
 
 @api_router.post("/pricing-grid")
 async def create_pricing_item(body: PricingItemCreate, request: Request):
@@ -726,6 +915,7 @@ async def create_pricing_item(body: PricingItemCreate, request: Request):
     await db.pricing_grid.insert_one({**doc, "_id": doc["id"]})
     return doc
 
+
 @api_router.put("/pricing-grid/{item_id}")
 async def update_pricing_item(item_id: str, body: PricingItemUpdate, request: Request):
     await require_admin(request)
@@ -740,6 +930,7 @@ async def update_pricing_item(item_id: str, body: PricingItemUpdate, request: Re
         raise HTTPException(404, "Article introuvable")
     return item
 
+
 @api_router.delete("/pricing-grid/{item_id}")
 async def delete_pricing_item(item_id: str, request: Request):
     await require_admin(request)
@@ -748,35 +939,50 @@ async def delete_pricing_item(item_id: str, request: Request):
         raise HTTPException(404, "Article introuvable")
     return {"message": "Article supprimé"}
 
+
 # ─── PDF Generation ───────────────────────────────────────────────────────────
 def generate_quote_pdf(q: dict) -> bytes:
+    from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet
     from reportlab.lib.units import cm
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+    from reportlab.platypus import (
+        HRFlowable,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
 
     buf = io.BytesIO()
     CW = 17.4 * cm
-    doc = SimpleDocTemplate(buf, pagesize=A4,
-                            leftMargin=1.8*cm, rightMargin=1.8*cm,
-                            topMargin=1.5*cm, bottomMargin=2*cm)
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=A4,
+        leftMargin=1.8 * cm,
+        rightMargin=1.8 * cm,
+        topMargin=1.5 * cm,
+        bottomMargin=2 * cm,
+    )
 
-    GOLD  = colors.HexColor("#D4AF37")
-    DARK  = colors.HexColor("#111111")
+    GOLD = colors.HexColor("#D4AF37")
+    DARK = colors.HexColor("#111111")
     LIGHT = colors.HexColor("#F8F8F8")
     BORDER = colors.HexColor("#DDDDDD")
-    ss    = getSampleStyleSheet()
-    base  = ss["Normal"]
+    ss = getSampleStyleSheet()
+    base = ss["Normal"]
 
     def esc(s):
         return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     def P(txt, size=9, color="#333333", bold=False):
         b, eb = ("<b>", "</b>") if bold else ("", "")
-        return Paragraph(f'{b}<font size="{size}" color="{color}">{esc(txt)}</font>{eb}', base)
+        return Paragraph(
+            f'{b}<font size="{size}" color="{color}">{esc(txt)}</font>{eb}', base
+        )
 
-    elems   = []
+    elems = []
     now_str = datetime.now().strftime("%d/%m/%Y")
     LW = 8.5 * cm
     RW = CW - LW
@@ -789,42 +995,66 @@ def generate_quote_pdf(q: dict) -> bytes:
         [P("contact@e3c-construction.com", 8.5, "#666666")],
     ]
     left_t = Table(left_data, colWidths=[LW])
-    left_t.setStyle(TableStyle([
-        ("TOPPADDING",    (0,0),(-1,-1), 3),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 3),
-        ("LEFTPADDING",   (0,0),(-1,-1), 0),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 8),
-    ]))
+    left_t.setStyle(
+        TableStyle(
+            [
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ]
+        )
+    )
 
     valid = esc(q.get("valid_until") or "—")
     right_data = [
         [P("DEVIS", 15, "#FFFFFF", True)],
         [P(esc(q["quote_number"]), 12, "#D4AF37", True)],
-        [Spacer(1, 0.15*cm)],
-        [Paragraph(f'<font size="8" color="#AAAAAA">Date :             </font><font size="8.5" color="#FFFFFF">{now_str}</font>', base)],
-        [Paragraph(f'<font size="8" color="#AAAAAA">Valable jusqu\'au : </font><font size="8.5" color="#D4AF37">{valid}</font>', base)],
+        [Spacer(1, 0.15 * cm)],
+        [
+            Paragraph(
+                f'<font size="8" color="#AAAAAA">Date :             </font><font size="8.5" color="#FFFFFF">{now_str}</font>',
+                base,
+            )
+        ],
+        [
+            Paragraph(
+                f'<font size="8" color="#AAAAAA">Valable jusqu\'au : </font><font size="8.5" color="#D4AF37">{valid}</font>',
+                base,
+            )
+        ],
     ]
     right_t = Table(right_data, colWidths=[RW])
-    right_t.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),(-1,-1), DARK),
-        ("TOPPADDING",    (0,0),(-1,-1), 4),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
-        ("LEFTPADDING",   (0,0),(-1,-1), 14),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
-        ("TOPPADDING",    (0,0),(0,0), 14),
-        ("BOTTOMPADDING", (0,-1),(-1,-1), 14),
-    ]))
+    right_t.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), DARK),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 14),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (0, 0), 14),
+                ("BOTTOMPADDING", (0, -1), (-1, -1), 14),
+            ]
+        )
+    )
     header_t = Table([[left_t, right_t]], colWidths=[LW, RW])
-    header_t.setStyle(TableStyle([
-        ("VALIGN",        (0,0),(-1,-1), "TOP"),
-        ("LEFTPADDING",   (0,0),(-1,-1), 0),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 0),
-        ("TOPPADDING",    (0,0),(-1,-1), 0),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 0),
-    ]))
+    header_t.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
     elems.append(header_t)
-    elems.append(Spacer(1, 0.5*cm))
-    elems.append(HRFlowable(width="100%", thickness=1.5, color=GOLD, spaceAfter=0.4*cm))
+    elems.append(Spacer(1, 0.5 * cm))
+    elems.append(
+        HRFlowable(width="100%", thickness=1.5, color=GOLD, spaceAfter=0.4 * cm)
+    )
 
     # ── ÉTABLI POUR ─────────────────────────────────────────
     cli_rows = [
@@ -837,154 +1067,215 @@ def generate_quote_pdf(q: dict) -> bytes:
     if q.get("client_address"):
         cli_rows.append([P(q["client_address"], 8.5, "#555555")])
     cli_t = Table(cli_rows, colWidths=[CW])
-    cli_t.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),(-1,-1), LIGHT),
-        ("LEFTPADDING",   (0,0),(-1,-1), 10),
-        ("TOPPADDING",    (0,0),(-1,-1), 4),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
-        ("TOPPADDING",    (0,0),(0,0), 8),
-        ("BOTTOMPADDING", (0,-1),(-1,-1), 8),
-        ("BOX",           (0,0),(-1,-1), 0.5, BORDER),
-    ]))
+    cli_t.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), LIGHT),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (0, 0), 8),
+                ("BOTTOMPADDING", (0, -1), (-1, -1), 8),
+                ("BOX", (0, 0), (-1, -1), 0.5, BORDER),
+            ]
+        )
+    )
     elems.append(cli_t)
-    elems.append(Spacer(1, 0.4*cm))
+    elems.append(Spacer(1, 0.4 * cm))
 
     if q.get("project_description"):
         elems.append(P(f'Objet : {q["project_description"]}', 9))
-        elems.append(Spacer(1, 0.4*cm))
+        elems.append(Spacer(1, 0.4 * cm))
 
     # ── LINE ITEMS ──────────────────────────────────────────
-    cw_items = [6.9*cm, 1.5*cm, 2.5*cm, 1.5*cm, 2.5*cm, 2.5*cm]
-    hdr = [P(h, 8.5, "#FFFFFF", True) for h in ["Description","Qte","P.U. HT","TVA","Total HT","Total TTC"]]
+    cw_items = [6.9 * cm, 1.5 * cm, 2.5 * cm, 1.5 * cm, 2.5 * cm, 2.5 * cm]
+    hdr = [
+        P(h, 8.5, "#FFFFFF", True)
+        for h in ["Description", "Qte", "P.U. HT", "TVA", "Total HT", "Total TTC"]
+    ]
     rows = [hdr]
     for item in q.get("line_items", []):
-        rows.append([
-            P(item.get("description",""), 8.5),
-            P(str(item.get("quantity","")), 8.5),
-            P(f'{item.get("unit_price",0):.2f} EUR', 8.5),
-            P(f'{item.get("tva_rate",8.5):.1f}%', 8.5),
-            P(f'{item.get("total_ht",0):.2f} EUR', 8.5),
-            P(f'{item.get("total_ttc",0):.2f} EUR', 8.5, "#333333", True),
-        ])
+        rows.append(
+            [
+                P(item.get("description", ""), 8.5),
+                P(str(item.get("quantity", "")), 8.5),
+                P(f'{item.get("unit_price",0):.2f} EUR', 8.5),
+                P(f'{item.get("tva_rate",8.5):.1f}%', 8.5),
+                P(f'{item.get("total_ht",0):.2f} EUR', 8.5),
+                P(f'{item.get("total_ttc",0):.2f} EUR', 8.5, "#333333", True),
+            ]
+        )
     items_t = Table(rows, colWidths=cw_items, repeatRows=1)
-    items_t.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),(-1,0), DARK),
-        ("ROWBACKGROUNDS",(0,1),(-1,-1), [colors.white, LIGHT]),
-        ("GRID",          (0,0),(-1,-1), 0.4, BORDER),
-        ("ALIGN",         (1,0),(-1,-1), "CENTER"),
-        ("ALIGN",         (4,1),(5,-1), "RIGHT"),
-        ("TOPPADDING",    (0,0),(-1,-1), 6),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 6),
-        ("LEFTPADDING",   (0,0),(0,-1), 8),
-        ("RIGHTPADDING",  (5,0),(5,-1), 8),
-        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
-    ]))
+    items_t.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), DARK),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LIGHT]),
+                ("GRID", (0, 0), (-1, -1), 0.4, BORDER),
+                ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+                ("ALIGN", (4, 1), (5, -1), "RIGHT"),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (0, -1), 8),
+                ("RIGHTPADDING", (5, 0), (5, -1), 8),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
+    )
     elems.append(items_t)
-    elems.append(Spacer(1, 0.3*cm))
+    elems.append(Spacer(1, 0.3 * cm))
 
     # ── TOTALS ──────────────────────────────────────────────
     TW = 7.5 * cm
     t_rows = [
-        [P("Total HT :", 9),  P(f'{q["total_ht"]:.2f} EUR', 9, "#333333", True)],
-        [P("TVA :", 9),       P(f'{q.get("total_tva",0):.2f} EUR', 9, "#555555")],
-        [P("TOTAL TTC :", 10, "#111111", True), P(f'{q["total_ttc"]:.2f} EUR', 11, "#D4AF37", True)],
+        [P("Total HT :", 9), P(f'{q["total_ht"]:.2f} EUR', 9, "#333333", True)],
+        [P("TVA :", 9), P(f'{q.get("total_tva",0):.2f} EUR', 9, "#555555")],
+        [
+            P("TOTAL TTC :", 10, "#111111", True),
+            P(f'{q["total_ttc"]:.2f} EUR', 11, "#D4AF37", True),
+        ],
     ]
-    tot_t = Table(t_rows, colWidths=[4.0*cm, TW - 4.0*cm])
-    tot_t.setStyle(TableStyle([
-        ("ALIGN",         (1,0),(1,-1), "RIGHT"),
-        ("TOPPADDING",    (0,0),(-1,-1), 5),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 5),
-        ("LEFTPADDING",   (0,0),(-1,-1), 10),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
-        ("LINEABOVE",     (0,-1),(-1,-1), 0.5, BORDER),
-        ("BACKGROUND",    (0,-1),(-1,-1), colors.HexColor("#FBF7E8")),
-        ("TOPPADDING",    (0,-1),(-1,-1), 8),
-        ("BOTTOMPADDING", (0,-1),(-1,-1), 8),
-    ]))
-    wrap = Table([[Spacer(1,1), tot_t]], colWidths=[CW - TW, TW])
-    wrap.setStyle(TableStyle([
-        ("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0),
-        ("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),
-    ]))
+    tot_t = Table(t_rows, colWidths=[4.0 * cm, TW - 4.0 * cm])
+    tot_t.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("LINEABOVE", (0, -1), (-1, -1), 0.5, BORDER),
+                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#FBF7E8")),
+                ("TOPPADDING", (0, -1), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, -1), (-1, -1), 8),
+            ]
+        )
+    )
+    wrap = Table([[Spacer(1, 1), tot_t]], colWidths=[CW - TW, TW])
+    wrap.setStyle(
+        TableStyle(
+            [
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
     elems.append(wrap)
 
     if q.get("notes"):
-        elems.append(Spacer(1, 0.5*cm))
+        elems.append(Spacer(1, 0.5 * cm))
         elems.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
-        elems.append(Spacer(1, 0.3*cm))
+        elems.append(Spacer(1, 0.3 * cm))
         elems.append(P(f'Notes : {q["notes"]}', 9, "#555555"))
 
-    elems.append(Spacer(1, 1.2*cm))
+    elems.append(Spacer(1, 1.2 * cm))
 
     # ── DISCLAIMER ──────────────────────────────────────────
     disc_text = Paragraph(
         '<font size="8" color="#92400E"><b>Estimation prévisionnelle, non contractuelle</b> — '
-        'Ce chiffrage est établi sur la base des informations communiquées et reste indicatif. '
+        "Ce chiffrage est établi sur la base des informations communiquées et reste indicatif. "
         "Une visite technique gratuite de l'un de nos experts permettra de confirmer et finaliser "
-        'les tarifs définitifs. Tout ajustement éventuel sera soumis à votre validation avant tout engagement.</font>',
-        base
+        "les tarifs définitifs. Tout ajustement éventuel sera soumis à votre validation avant tout engagement.</font>",
+        base,
     )
     disc_t = Table([[disc_text]], colWidths=[CW])
-    disc_t.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),(-1,-1), colors.HexColor("#FFFBEB")),
-        ("LEFTPADDING",   (0,0),(-1,-1), 10),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
-        ("TOPPADDING",    (0,0),(-1,-1), 8),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 8),
-        ("BOX",           (0,0),(-1,-1), 0.5, colors.HexColor("#F59E0B")),
-    ]))
+    disc_t.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFFBEB")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#F59E0B")),
+            ]
+        )
+    )
     elems.append(disc_t)
-    elems.append(Spacer(1, 0.8*cm))
+    elems.append(Spacer(1, 0.8 * cm))
 
-    sig_t = Table([
-        [P("Bon pour accord :", 8.5, "#666666"), P("Signature du client :", 8.5, "#666666")],
-        [P(q["client_name"], 9, "#333333", True), Spacer(1, 0.1*cm)],
-        [Spacer(1, 1.2*cm), Spacer(1, 1.2*cm)],
-    ], colWidths=[CW/2, CW/2])
-    sig_t.setStyle(TableStyle([
-        ("BOX",          (0,0),(-1,-1), 0.5, BORDER),
-        ("LINEAFTER",    (0,0),(0,-1), 0.5, BORDER),
-        ("TOPPADDING",   (0,0),(-1,-1), 6),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 6),
-        ("LEFTPADDING",  (0,0),(-1,-1), 10),
-    ]))
+    sig_t = Table(
+        [
+            [
+                P("Bon pour accord :", 8.5, "#666666"),
+                P("Signature du client :", 8.5, "#666666"),
+            ],
+            [P(q["client_name"], 9, "#333333", True), Spacer(1, 0.1 * cm)],
+            [Spacer(1, 1.2 * cm), Spacer(1, 1.2 * cm)],
+        ],
+        colWidths=[CW / 2, CW / 2],
+    )
+    sig_t.setStyle(
+        TableStyle(
+            [
+                ("BOX", (0, 0), (-1, -1), 0.5, BORDER),
+                ("LINEAFTER", (0, 0), (0, -1), 0.5, BORDER),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+            ]
+        )
+    )
     elems.append(sig_t)
 
-    elems.append(Spacer(1, 0.8*cm))
+    elems.append(Spacer(1, 0.8 * cm))
     elems.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
-    elems.append(Spacer(1, 0.3*cm))
-    elems.append(P("E3C Entreprise de Constructions  -  Guadeloupe (971)  -  contact@e3c-construction.com", 7.5, "#999999"))
+    elems.append(Spacer(1, 0.3 * cm))
+    elems.append(
+        P(
+            "E3C Entreprise de Constructions  -  Guadeloupe (971)  -  contact@e3c-construction.com",
+            7.5,
+            "#999999",
+        )
+    )
     doc.build(elems)
     return buf.getvalue()
 
+
 def generate_invoice_pdf(inv: dict) -> bytes:
+    from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet
     from reportlab.lib.units import cm
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+    from reportlab.platypus import (
+        HRFlowable,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
 
     buf = io.BytesIO()
     CW = 17.4 * cm
-    doc = SimpleDocTemplate(buf, pagesize=A4,
-                            leftMargin=1.8*cm, rightMargin=1.8*cm,
-                            topMargin=1.5*cm, bottomMargin=2*cm)
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=A4,
+        leftMargin=1.8 * cm,
+        rightMargin=1.8 * cm,
+        topMargin=1.5 * cm,
+        bottomMargin=2 * cm,
+    )
 
-    GOLD  = colors.HexColor("#D4AF37")
-    DARK  = colors.HexColor("#111111")
+    GOLD = colors.HexColor("#D4AF37")
+    DARK = colors.HexColor("#111111")
     LIGHT = colors.HexColor("#F8F8F8")
     BORDER = colors.HexColor("#DDDDDD")
-    ss    = getSampleStyleSheet()
-    base  = ss["Normal"]
+    ss = getSampleStyleSheet()
+    base = ss["Normal"]
 
     def esc(s):
         return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     def P(txt, size=9, color="#333333", bold=False):
         b, eb = ("<b>", "</b>") if bold else ("", "")
-        return Paragraph(f'{b}<font size="{size}" color="{color}">{esc(txt)}</font>{eb}', base)
+        return Paragraph(
+            f'{b}<font size="{size}" color="{color}">{esc(txt)}</font>{eb}', base
+        )
 
-    elems   = []
+    elems = []
     now_str = datetime.now().strftime("%d/%m/%Y")
     LW = 8.5 * cm
     RW = CW - LW
@@ -997,42 +1288,66 @@ def generate_invoice_pdf(inv: dict) -> bytes:
         [P("contact@e3c-construction.com", 8.5, "#666666")],
     ]
     left_t = Table(left_data, colWidths=[LW])
-    left_t.setStyle(TableStyle([
-        ("TOPPADDING",    (0,0),(-1,-1), 3),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 3),
-        ("LEFTPADDING",   (0,0),(-1,-1), 0),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 8),
-    ]))
+    left_t.setStyle(
+        TableStyle(
+            [
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ]
+        )
+    )
 
     ref_val = esc(inv.get("quote_number") or "—")
     right_data = [
         [P("FACTURE", 15, "#FFFFFF", True)],
         [P(esc(inv["invoice_number"]), 12, "#D4AF37", True)],
-        [Spacer(1, 0.15*cm)],
-        [Paragraph(f'<font size="8" color="#AAAAAA">Date :         </font><font size="8.5" color="#FFFFFF">{now_str}</font>', base)],
-        [Paragraph(f'<font size="8" color="#AAAAAA">Ref. devis :   </font><font size="8.5" color="#D4AF37">{ref_val}</font>', base)],
+        [Spacer(1, 0.15 * cm)],
+        [
+            Paragraph(
+                f'<font size="8" color="#AAAAAA">Date :         </font><font size="8.5" color="#FFFFFF">{now_str}</font>',
+                base,
+            )
+        ],
+        [
+            Paragraph(
+                f'<font size="8" color="#AAAAAA">Ref. devis :   </font><font size="8.5" color="#D4AF37">{ref_val}</font>',
+                base,
+            )
+        ],
     ]
     right_t = Table(right_data, colWidths=[RW])
-    right_t.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),(-1,-1), DARK),
-        ("TOPPADDING",    (0,0),(-1,-1), 4),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
-        ("LEFTPADDING",   (0,0),(-1,-1), 14),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
-        ("TOPPADDING",    (0,0),(0,0), 14),
-        ("BOTTOMPADDING", (0,-1),(-1,-1), 14),
-    ]))
+    right_t.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), DARK),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 14),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (0, 0), 14),
+                ("BOTTOMPADDING", (0, -1), (-1, -1), 14),
+            ]
+        )
+    )
     header_t = Table([[left_t, right_t]], colWidths=[LW, RW])
-    header_t.setStyle(TableStyle([
-        ("VALIGN",        (0,0),(-1,-1), "TOP"),
-        ("LEFTPADDING",   (0,0),(-1,-1), 0),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 0),
-        ("TOPPADDING",    (0,0),(-1,-1), 0),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 0),
-    ]))
+    header_t.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
     elems.append(header_t)
-    elems.append(Spacer(1, 0.5*cm))
-    elems.append(HRFlowable(width="100%", thickness=1.5, color=GOLD, spaceAfter=0.4*cm))
+    elems.append(Spacer(1, 0.5 * cm))
+    elems.append(
+        HRFlowable(width="100%", thickness=1.5, color=GOLD, spaceAfter=0.4 * cm)
+    )
 
     # ── FACTURER À ──────────────────────────────────────────
     bill_rows = [
@@ -1045,125 +1360,175 @@ def generate_invoice_pdf(inv: dict) -> bytes:
     if inv.get("client_address"):
         bill_rows.append([P(inv["client_address"], 8.5, "#555555")])
     bill_t = Table(bill_rows, colWidths=[CW])
-    bill_t.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),(-1,-1), LIGHT),
-        ("LEFTPADDING",   (0,0),(-1,-1), 10),
-        ("TOPPADDING",    (0,0),(-1,-1), 4),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
-        ("TOPPADDING",    (0,0),(0,0), 8),
-        ("BOTTOMPADDING", (0,-1),(-1,-1), 8),
-        ("BOX",           (0,0),(-1,-1), 0.5, BORDER),
-    ]))
+    bill_t.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), LIGHT),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (0, 0), 8),
+                ("BOTTOMPADDING", (0, -1), (-1, -1), 8),
+                ("BOX", (0, 0), (-1, -1), 0.5, BORDER),
+            ]
+        )
+    )
     elems.append(bill_t)
-    elems.append(Spacer(1, 0.4*cm))
+    elems.append(Spacer(1, 0.4 * cm))
 
     if inv.get("project_description"):
         elems.append(P(f'Objet : {inv["project_description"]}', 9))
-        elems.append(Spacer(1, 0.4*cm))
+        elems.append(Spacer(1, 0.4 * cm))
 
     # ── LINE ITEMS ──────────────────────────────────────────
-    cw_items = [6.9*cm, 1.5*cm, 2.5*cm, 1.5*cm, 2.5*cm, 2.5*cm]
-    hdr = [P(h, 8.5, "#FFFFFF", True) for h in ["Description","Qte","P.U. HT","TVA","Total HT","Total TTC"]]
+    cw_items = [6.9 * cm, 1.5 * cm, 2.5 * cm, 1.5 * cm, 2.5 * cm, 2.5 * cm]
+    hdr = [
+        P(h, 8.5, "#FFFFFF", True)
+        for h in ["Description", "Qte", "P.U. HT", "TVA", "Total HT", "Total TTC"]
+    ]
     rows = [hdr]
     for item in inv.get("line_items", []):
-        rows.append([
-            P(item.get("description",""), 8.5),
-            P(str(item.get("quantity","")), 8.5),
-            P(f'{item.get("unit_price",0):.2f} EUR', 8.5),
-            P(f'{item.get("tva_rate",8.5):.1f}%', 8.5),
-            P(f'{item.get("total_ht",0):.2f} EUR', 8.5),
-            P(f'{item.get("total_ttc",0):.2f} EUR', 8.5, "#333333", True),
-        ])
+        rows.append(
+            [
+                P(item.get("description", ""), 8.5),
+                P(str(item.get("quantity", "")), 8.5),
+                P(f'{item.get("unit_price",0):.2f} EUR', 8.5),
+                P(f'{item.get("tva_rate",8.5):.1f}%', 8.5),
+                P(f'{item.get("total_ht",0):.2f} EUR', 8.5),
+                P(f'{item.get("total_ttc",0):.2f} EUR', 8.5, "#333333", True),
+            ]
+        )
     items_t = Table(rows, colWidths=cw_items, repeatRows=1)
-    items_t.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),(-1,0), DARK),
-        ("ROWBACKGROUNDS",(0,1),(-1,-1), [colors.white, LIGHT]),
-        ("GRID",          (0,0),(-1,-1), 0.4, BORDER),
-        ("ALIGN",         (1,0),(-1,-1), "CENTER"),
-        ("ALIGN",         (4,1),(5,-1), "RIGHT"),
-        ("TOPPADDING",    (0,0),(-1,-1), 6),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 6),
-        ("LEFTPADDING",   (0,0),(0,-1), 8),
-        ("RIGHTPADDING",  (5,0),(5,-1), 8),
-        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
-    ]))
+    items_t.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), DARK),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LIGHT]),
+                ("GRID", (0, 0), (-1, -1), 0.4, BORDER),
+                ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+                ("ALIGN", (4, 1), (5, -1), "RIGHT"),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (0, -1), 8),
+                ("RIGHTPADDING", (5, 0), (5, -1), 8),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
+    )
     elems.append(items_t)
-    elems.append(Spacer(1, 0.3*cm))
+    elems.append(Spacer(1, 0.3 * cm))
 
     # ── TOTALS ──────────────────────────────────────────────
     TW = 7.5 * cm
     t_rows = [
-        [P("Total HT :", 9),  P(f'{inv["total_ht"]:.2f} EUR', 9, "#333333", True)],
-        [P("TVA :", 9),       P(f'{inv.get("total_tva",0):.2f} EUR', 9, "#555555")],
-        [P("TOTAL TTC :", 10, "#111111", True), P(f'{inv["total_ttc"]:.2f} EUR', 11, "#D4AF37", True)],
+        [P("Total HT :", 9), P(f'{inv["total_ht"]:.2f} EUR', 9, "#333333", True)],
+        [P("TVA :", 9), P(f'{inv.get("total_tva",0):.2f} EUR', 9, "#555555")],
+        [
+            P("TOTAL TTC :", 10, "#111111", True),
+            P(f'{inv["total_ttc"]:.2f} EUR', 11, "#D4AF37", True),
+        ],
     ]
-    tot_t = Table(t_rows, colWidths=[4.0*cm, TW - 4.0*cm])
-    tot_t.setStyle(TableStyle([
-        ("ALIGN",         (1,0),(1,-1), "RIGHT"),
-        ("TOPPADDING",    (0,0),(-1,-1), 5),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 5),
-        ("LEFTPADDING",   (0,0),(-1,-1), 10),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
-        ("LINEABOVE",     (0,-1),(-1,-1), 0.5, BORDER),
-        ("BACKGROUND",    (0,-1),(-1,-1), colors.HexColor("#FBF7E8")),
-        ("TOPPADDING",    (0,-1),(-1,-1), 8),
-        ("BOTTOMPADDING", (0,-1),(-1,-1), 8),
-    ]))
-    wrap = Table([[Spacer(1,1), tot_t]], colWidths=[CW - TW, TW])
-    wrap.setStyle(TableStyle([
-        ("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0),
-        ("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),
-    ]))
+    tot_t = Table(t_rows, colWidths=[4.0 * cm, TW - 4.0 * cm])
+    tot_t.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("LINEABOVE", (0, -1), (-1, -1), 0.5, BORDER),
+                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#FBF7E8")),
+                ("TOPPADDING", (0, -1), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, -1), (-1, -1), 8),
+            ]
+        )
+    )
+    wrap = Table([[Spacer(1, 1), tot_t]], colWidths=[CW - TW, TW])
+    wrap.setStyle(
+        TableStyle(
+            [
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
     elems.append(wrap)
 
     # ── PAYMENT SCHEDULE ────────────────────────────────────
     if inv.get("payment_tranches"):
-        elems.append(Spacer(1, 0.6*cm))
+        elems.append(Spacer(1, 0.6 * cm))
         elems.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
-        elems.append(Spacer(1, 0.3*cm))
+        elems.append(Spacer(1, 0.3 * cm))
         elems.append(P("Calendrier de reglement", 9, "#111111", True))
-        elems.append(Spacer(1, 0.3*cm))
-        tr_cw = [7.0*cm, 3.0*cm, 4.0*cm, 3.4*cm]
-        tr_hdr = [P(h, 8.5, "#333333", True) for h in ["Tranche","Montant","Echeance","Statut"]]
+        elems.append(Spacer(1, 0.3 * cm))
+        tr_cw = [7.0 * cm, 3.0 * cm, 4.0 * cm, 3.4 * cm]
+        tr_hdr = [
+            P(h, 8.5, "#333333", True)
+            for h in ["Tranche", "Montant", "Echeance", "Statut"]
+        ]
         tr_rows = [tr_hdr]
         for t in inv["payment_tranches"]:
             sc = "#16a34a" if t["status"] == "paid" else "#B45309"
             sl = "Paye" if t["status"] == "paid" else "En attente"
-            tr_rows.append([
-                P(t["label"], 8.5),
-                P(f'{t["amount"]:.2f} EUR', 8.5, "#333333", True),
-                P(t.get("due_date","—"), 8.5),
-                P(sl, 8.5, sc, True),
-            ])
+            tr_rows.append(
+                [
+                    P(t["label"], 8.5),
+                    P(f'{t["amount"]:.2f} EUR', 8.5, "#333333", True),
+                    P(t.get("due_date", "—"), 8.5),
+                    P(sl, 8.5, sc, True),
+                ]
+            )
         trt = Table(tr_rows, colWidths=tr_cw)
-        trt.setStyle(TableStyle([
-            ("BACKGROUND",    (0,0),(-1,0), LIGHT),
-            ("GRID",          (0,0),(-1,-1), 0.4, BORDER),
-            ("TOPPADDING",    (0,0),(-1,-1), 6),
-            ("BOTTOMPADDING", (0,0),(-1,-1), 6),
-            ("LEFTPADDING",   (0,0),(0,-1), 8),
-            ("ALIGN",         (1,0),(1,-1), "RIGHT"),
-        ]))
+        trt.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), LIGHT),
+                    ("GRID", (0, 0), (-1, -1), 0.4, BORDER),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ("LEFTPADDING", (0, 0), (0, -1), 8),
+                    ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                ]
+            )
+        )
         elems.append(trt)
 
-    elems.append(Spacer(1, 0.8*cm))
+    elems.append(Spacer(1, 0.8 * cm))
     elems.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
-    elems.append(Spacer(1, 0.3*cm))
-    elems.append(P("E3C Entreprise de Constructions  -  Guadeloupe (971)  -  contact@e3c-construction.com", 7.5, "#999999"))
+    elems.append(Spacer(1, 0.3 * cm))
+    elems.append(
+        P(
+            "E3C Entreprise de Constructions  -  Guadeloupe (971)  -  contact@e3c-construction.com",
+            7.5,
+            "#999999",
+        )
+    )
     doc.build(elems)
     return buf.getvalue()
 
+
 # ─── App config ───────────────────────────────────────────────────────────────
-app.mount("/api/uploads", StaticFiles(directory=str(ROOT_DIR / "uploads")), name="uploads")
+app.mount(
+    "/api/uploads", StaticFiles(directory=str(ROOT_DIR / "uploads")), name="uploads"
+)
 api_router.include_router(auth_routes.router)
 api_router.include_router(payments_routes.router)
 api_router.include_router(admin_routes.router)
 app.include_router(api_router)
-app.add_middleware(CORSMiddleware,
+app.add_middleware(
+    CORSMiddleware,
     allow_origins=[FRONTEND_URL, "http://localhost:3000"],
-    allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
     from core import client as _mongo_client
+
     _mongo_client.close()

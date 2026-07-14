@@ -2,13 +2,15 @@
 panel (Stripe/Brevo/Google/Facebook/Apple/PayPal/bank-transfer credentials,
 stored encrypted in the DB — see settings_store.py).
 """
-import diagnostics
-import settings_store
+
+from typing import Optional
+
 import stripe as stripe_sdk
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
-from typing import Optional
 
+import diagnostics
+import settings_store
 from core import UPLOADS_DIR, db, require_admin
 
 router = APIRouter()
@@ -35,7 +37,9 @@ class SettingsUpdate(BaseModel):
 @router.get("/clients")
 async def list_clients(request: Request):
     await require_admin(request)
-    clients = await db.users.find({"role": "client"}, {"_id": 0, "password_hash": 0}).to_list(1000)
+    clients = await db.users.find(
+        {"role": "client"}, {"_id": 0, "password_hash": 0}
+    ).to_list(1000)
     return clients
 
 
@@ -45,7 +49,10 @@ async def get_diagnostics(request: Request):
     await require_admin(request)
     settings = await settings_store.get_settings(db)
     return await diagnostics.run_all_checks(
-        db=db, stripe_sdk=stripe_sdk, settings=settings, uploads_dir=UPLOADS_DIR,
+        db=db,
+        stripe_sdk=stripe_sdk,
+        settings=settings,
+        uploads_dir=UPLOADS_DIR,
     )
 
 

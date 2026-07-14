@@ -11,6 +11,7 @@ Requires a reachable MongoDB (same one used for local dev is fine — this uses
 a dedicated "e3c_test" database, never the dev/prod one) and a populated
 backend/.env for the secrets core.py requires at import time.
 """
+
 import os
 import sys
 from pathlib import Path
@@ -58,13 +59,19 @@ async def admin_client(client):
     hardcoded ADMIN_EMAIL/ADMIN_PASSWORD login path already covered elsewhere)."""
     import uuid
     from datetime import datetime, timezone
+
     uid = str(uuid.uuid4())
-    await core.db.users.insert_one({
-        "id": uid, "email": "test-admin@example.com",
-        "password_hash": core.hash_password("Sup3rSecret!"),
-        "name": "Test Admin", "phone": "", "role": "admin",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    })
+    await core.db.users.insert_one(
+        {
+            "id": uid,
+            "email": "test-admin@example.com",
+            "password_hash": core.hash_password("Sup3rSecret!"),
+            "name": "Test Admin",
+            "phone": "",
+            "role": "admin",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
     token = core.create_access_token(uid, "test-admin@example.com", "admin")
     client.cookies.set("access_token", token)
     return client
@@ -75,13 +82,19 @@ async def client_user_client(client):
     """An AsyncClient pre-authenticated as an ordinary (non-admin) client user."""
     import uuid
     from datetime import datetime, timezone
+
     uid = str(uuid.uuid4())
-    await core.db.users.insert_one({
-        "id": uid, "email": "test-client@example.com",
-        "password_hash": core.hash_password("Sup3rSecret!"),
-        "name": "Test Client", "phone": "", "role": "client",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    })
+    await core.db.users.insert_one(
+        {
+            "id": uid,
+            "email": "test-client@example.com",
+            "password_hash": core.hash_password("Sup3rSecret!"),
+            "name": "Test Client",
+            "phone": "",
+            "role": "client",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
     token = core.create_access_token(uid, "test-client@example.com", "client")
     client.cookies.set("access_token", token)
     return client

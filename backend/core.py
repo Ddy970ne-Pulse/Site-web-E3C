@@ -6,8 +6,11 @@ routers/payments_routes.py and routers/admin_routes.py can depend on it
 without importing server.py itself (which would be a circular import, since
 server.py is the one that includes those routers).
 """
+
 from pathlib import Path
+
 from dotenv import load_dotenv
+
 load_dotenv(Path(__file__).parent / ".env")
 
 import logging
@@ -96,13 +99,22 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 # ─── JWT helpers ────────────────────────────────────────────────────────────
 def create_access_token(user_id: str, email: str, role: str) -> str:
-    payload = {"sub": user_id, "email": email, "role": role,
-               "exp": datetime.now(timezone.utc) + timedelta(hours=24), "type": "access"}
+    payload = {
+        "sub": user_id,
+        "email": email,
+        "role": role,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=24),
+        "type": "access",
+    }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
 def create_refresh_token(user_id: str) -> str:
-    payload = {"sub": user_id, "exp": datetime.now(timezone.utc) + timedelta(days=7), "type": "refresh"}
+    payload = {
+        "sub": user_id,
+        "exp": datetime.now(timezone.utc) + timedelta(days=7),
+        "type": "refresh",
+    }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
@@ -144,10 +156,24 @@ async def require_client(request: Request) -> dict:
 
 
 def set_auth_cookies(response: Response, access: str, refresh: str):
-    response.set_cookie("access_token", access, httponly=True, secure=COOKIE_SECURE,
-                        samesite="lax", max_age=86400, path="/")
-    response.set_cookie("refresh_token", refresh, httponly=True, secure=COOKIE_SECURE,
-                        samesite="lax", max_age=604800, path="/")
+    response.set_cookie(
+        "access_token",
+        access,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite="lax",
+        max_age=86400,
+        path="/",
+    )
+    response.set_cookie(
+        "refresh_token",
+        refresh,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite="lax",
+        max_age=604800,
+        path="/",
+    )
 
 
 # ─── Email helper (Brevo) ───────────────────────────────────────────────────
@@ -155,15 +181,23 @@ async def send_email(to_email: str, subject: str, html: str):
     settings = await settings_store.get_settings(db)
     brevo_api_key = settings.get("brevo_api_key", "")
     if not brevo_api_key:
-        logger.info(f"[EMAIL SKIPPED - No Brevo key] To: {to_email} | Subject: {subject}")
+        logger.info(
+            f"[EMAIL SKIPPED - No Brevo key] To: {to_email} | Subject: {subject}"
+        )
         return
     try:
         async with httpx.AsyncClient() as c:
-            await c.post("https://api.brevo.com/v3/smtp/email",
+            await c.post(
+                "https://api.brevo.com/v3/smtp/email",
                 headers={"api-key": brevo_api_key, "Content-Type": "application/json"},
-                json={"sender": {"email": SENDER_EMAIL, "name": "E3C Constructions"},
-                      "to": [{"email": to_email}], "subject": subject, "htmlContent": html},
-                timeout=10)
+                json={
+                    "sender": {"email": SENDER_EMAIL, "name": "E3C Constructions"},
+                    "to": [{"email": to_email}],
+                    "subject": subject,
+                    "htmlContent": html,
+                },
+                timeout=10,
+            )
     except Exception as e:
         logger.error(f"Email error: {e}")
 
@@ -172,13 +206,20 @@ async def send_email(to_email: str, subject: str, html: str):
 async def seed_admin():
     existing = await db.users.find_one({"email": ADMIN_EMAIL})
     if not existing:
-        await db.users.insert_one({
-            "id": str(uuid.uuid4()), "email": ADMIN_EMAIL,
-            "password_hash": hash_password(ADMIN_PASSWORD),
-            "name": "Administrateur E3C", "phone": "0690 44 97 14",
-            "role": "admin", "created_at": datetime.now(timezone.utc).isoformat()
-        })
+        await db.users.insert_one(
+            {
+                "id": str(uuid.uuid4()),
+                "email": ADMIN_EMAIL,
+                "password_hash": hash_password(ADMIN_PASSWORD),
+                "name": "Administrateur E3C",
+                "phone": "0690 44 97 14",
+                "role": "admin",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
         logger.info(f"Admin créé: {ADMIN_EMAIL}")
     elif not verify_password(ADMIN_PASSWORD, existing.get("password_hash", "")):
-        await db.users.update_one({"email": ADMIN_EMAIL},
-            {"$set": {"password_hash": hash_password(ADMIN_PASSWORD)}})
+        await db.users.update_one(
+            {"email": ADMIN_EMAIL},
+            {"$set": {"password_hash": hash_password(ADMIN_PASSWORD)}},
+        )

@@ -9,7 +9,9 @@ Une valeur non définie en base retombe sur la variable d'environnement correspo
 (compatibilité avec les déploiements existants). Le cache mémoire est invalidé à
 chaque écriture pour que les changements s'appliquent sans redémarrage.
 """
+
 import os
+
 from cryptography.fernet import Fernet, InvalidToken
 
 SETTINGS_DOC_ID = "singleton"
@@ -22,7 +24,11 @@ FIELDS = [
     ("google_client_id", "GOOGLE_CLIENT_ID", False),
     ("facebook_app_id", "FACEBOOK_APP_ID", False),
     ("facebook_app_secret", "FACEBOOK_APP_SECRET", True),
-    ("apple_client_id", "APPLE_CLIENT_ID", False),  # Services ID — pas de secret nécessaire
+    (
+        "apple_client_id",
+        "APPLE_CLIENT_ID",
+        False,
+    ),  # Services ID — pas de secret nécessaire
     ("paypal_client_id", "PAYPAL_CLIENT_ID", False),
     ("paypal_client_secret", "PAYPAL_CLIENT_SECRET", True),
     ("paypal_mode", "PAYPAL_MODE", False),  # "sandbox" ou "live"
@@ -45,7 +51,7 @@ def _fernet() -> Fernet:
         raise RuntimeError(
             "SETTINGS_ENCRYPTION_KEY environment variable is required to store/read "
             "integration settings. Generate one with: "
-            "python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+            'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
         )
     return Fernet(key.encode())
 
@@ -101,14 +107,18 @@ async def get_settings_status(db) -> dict:
         status[name] = {
             "configured": bool(decrypted),
             "source": source,
-            "preview": (f"···{decrypted[-4:]}" if encrypted and decrypted else decrypted) or None,
+            "preview": (
+                f"···{decrypted[-4:]}" if encrypted and decrypted else decrypted
+            )
+            or None,
         }
     return status
 
 
 async def update_settings(db, updates: dict) -> None:
     """N'écrase que les champs fournis et non vides. Un champ omis ou vide conserve
-    sa valeur actuelle (permet de ne changer qu'une seule clé sans re-saisir les autres)."""
+    sa valeur actuelle (permet de ne changer qu'une seule clé sans re-saisir les autres).
+    """
     field_map = {name: (encrypted) for name, _, encrypted in FIELDS}
     set_ops = {}
     for name, value in updates.items():

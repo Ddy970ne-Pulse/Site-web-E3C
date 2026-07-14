@@ -17,9 +17,14 @@ async def test_login_is_rate_limited_after_twenty_attempts(client):
 async def test_register_is_rate_limited_after_twenty_attempts(client):
     statuses = []
     for i in range(22):
-        r = await client.post("/api/auth/register", json={
-            "email": f"spam{i}@example.com", "password": "password123", "name": "Spam",
-        })
+        r = await client.post(
+            "/api/auth/register",
+            json={
+                "email": f"spam{i}@example.com",
+                "password": "password123",
+                "name": "Spam",
+            },
+        )
         statuses.append(r.status_code)
     assert 429 in statuses
     assert statuses.index(429) == 20

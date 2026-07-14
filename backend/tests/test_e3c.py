@@ -1,10 +1,12 @@
-import pytest
-import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+import pytest
+import requests
+
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 
 # Backend API tests for E3C site
+
 
 class TestRoot:
     def test_api_root(self):
@@ -15,6 +17,7 @@ class TestRoot:
         assert "E3C" in data["message"]
         print(f"PASS: GET /api/ => {data}")
 
+
 class TestContact:
     def test_submit_contact(self):
         payload = {
@@ -22,7 +25,7 @@ class TestContact:
             "phone": "0690123456",
             "commune": "Pointe-à-Pitre",
             "service": "Maçonnerie",
-            "message": "Test message"
+            "message": "Test message",
         }
         r = requests.post(f"{BASE_URL}/api/contact", json=payload)
         assert r.status_code == 200

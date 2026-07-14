@@ -1,10 +1,12 @@
 """
 Backend tests for E3C BTP - Auth, Quotes, Invoices, Payments
 """
-import pytest
-import requests
+
 import os
 import uuid
+
+import pytest
+import requests
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 
@@ -22,7 +24,10 @@ TEST_CLIENT_NAME = "Test Client E3C"
 def admin_session():
     """Admin authenticated session"""
     s = requests.Session()
-    r = s.post(f"{BASE_URL}/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    r = s.post(
+        f"{BASE_URL}/api/auth/login",
+        json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+    )
     assert r.status_code == 200, f"Admin login failed: {r.text}"
     return s
 
@@ -31,12 +36,15 @@ def admin_session():
 def client_data(admin_session):
     """Register a test client and return session + user info"""
     s = requests.Session()
-    r = s.post(f"{BASE_URL}/api/auth/register", json={
-        "email": TEST_CLIENT_EMAIL,
-        "password": TEST_CLIENT_PASSWORD,
-        "name": TEST_CLIENT_NAME,
-        "phone": "0690000001"
-    })
+    r = s.post(
+        f"{BASE_URL}/api/auth/register",
+        json={
+            "email": TEST_CLIENT_EMAIL,
+            "password": TEST_CLIENT_PASSWORD,
+            "name": TEST_CLIENT_NAME,
+            "phone": "0690000001",
+        },
+    )
     assert r.status_code == 200, f"Register failed: {r.text}"
     data = r.json()
     return {"session": s, "user": data}
@@ -46,13 +54,23 @@ def client_data(admin_session):
 def test_quote(admin_session, client_data):
     """Create a test quote"""
     client_id = client_data["user"]["id"]
-    r = admin_session.post(f"{BASE_URL}/api/quotes", json={
-        "client_id": client_id,
-        "project_description": "Test project - maçonnerie",
-        "line_items": [{"description": "Fondations", "quantity": 10, "unit_price": 100, "tva_rate": 8.5}],
-        "valid_until": "2026-12-31",
-        "notes": "Test note"
-    })
+    r = admin_session.post(
+        f"{BASE_URL}/api/quotes",
+        json={
+            "client_id": client_id,
+            "project_description": "Test project - maçonnerie",
+            "line_items": [
+                {
+                    "description": "Fondations",
+                    "quantity": 10,
+                    "unit_price": 100,
+                    "tva_rate": 8.5,
+                }
+            ],
+            "valid_until": "2026-12-31",
+            "notes": "Test note",
+        },
+    )
     assert r.status_code == 200, f"Quote creation failed: {r.text}"
     return r.json()
 
@@ -82,14 +100,20 @@ class TestHealth:
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 class TestAuth:
     def test_admin_login(self):
-        r = requests.post(f"{BASE_URL}/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+        r = requests.post(
+            f"{BASE_URL}/api/auth/login",
+            json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+        )
         assert r.status_code == 200
         data = r.json()
         assert data["role"] == "admin"
         assert data["email"] == ADMIN_EMAIL
 
     def test_wrong_password(self):
-        r = requests.post(f"{BASE_URL}/api/auth/login", json={"email": ADMIN_EMAIL, "password": "wrong"})
+        r = requests.post(
+            f"{BASE_URL}/api/auth/login",
+            json={"email": ADMIN_EMAIL, "password": "wrong"},
+        )
         assert r.status_code == 401
 
     def test_register_client(self, client_data):
@@ -97,10 +121,15 @@ class TestAuth:
         assert client_data["user"]["email"] == TEST_CLIENT_EMAIL
 
     def test_duplicate_register(self):
-        r = requests.post(f"{BASE_URL}/api/auth/register", json={
-            "email": ADMIN_EMAIL, "password": "whatever",
-            "name": "Dup", "phone": ""
-        })
+        r = requests.post(
+            f"{BASE_URL}/api/auth/register",
+            json={
+                "email": ADMIN_EMAIL,
+                "password": "whatever",
+                "name": "Dup",
+                "phone": "",
+            },
+        )
         assert r.status_code == 400
 
     def test_me_admin(self, admin_session):
@@ -114,7 +143,10 @@ class TestAuth:
 
     def test_logout(self):
         s = requests.Session()
-        s.post(f"{BASE_URL}/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+        s.post(
+            f"{BASE_URL}/api/auth/login",
+            json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+        )
         r = s.post(f"{BASE_URL}/api/auth/logout")
         assert r.status_code == 200
 
@@ -179,23 +211,47 @@ class TestInvoices:
     def test_set_tranches(self, admin_session, test_invoice):
         inv_id = test_invoice["id"]
         total = test_invoice["total_ttc"]
-        r = admin_session.put(f"{BASE_URL}/api/invoices/{inv_id}/tranches", json={
-            "tranches": [
-                {"id": str(uuid.uuid4()), "label": "Acompte 30%", "amount": round(total * 0.3, 2), "due_date": "2026-03-01", "status": "pending"},
-                {"id": str(uuid.uuid4()), "label": "Solde 70%", "amount": round(total * 0.7, 2), "due_date": "2026-06-01", "status": "pending"},
-            ]
-        })
+        r = admin_session.put(
+            f"{BASE_URL}/api/invoices/{inv_id}/tranches",
+            json={
+                "tranches": [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "label": "Acompte 30%",
+                        "amount": round(total * 0.3, 2),
+                        "due_date": "2026-03-01",
+                        "status": "pending",
+                    },
+                    {
+                        "id": str(uuid.uuid4()),
+                        "label": "Solde 70%",
+                        "amount": round(total * 0.7, 2),
+                        "due_date": "2026-06-01",
+                        "status": "pending",
+                    },
+                ]
+            },
+        )
         assert r.status_code == 200, f"Tranches failed: {r.text}"
         data = r.json()
         assert len(data["payment_tranches"]) == 2
 
     def test_tranches_amount_mismatch(self, admin_session, test_invoice):
         inv_id = test_invoice["id"]
-        r = admin_session.put(f"{BASE_URL}/api/invoices/{inv_id}/tranches", json={
-            "tranches": [
-                {"id": str(uuid.uuid4()), "label": "Bad", "amount": 1.00, "due_date": "2026-03-01", "status": "pending"},
-            ]
-        })
+        r = admin_session.put(
+            f"{BASE_URL}/api/invoices/{inv_id}/tranches",
+            json={
+                "tranches": [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "label": "Bad",
+                        "amount": 1.00,
+                        "due_date": "2026-03-01",
+                        "status": "pending",
+                    },
+                ]
+            },
+        )
         assert r.status_code == 400
 
     def test_invoice_pdf(self, admin_session, test_invoice):
@@ -238,11 +294,14 @@ class TestPayments:
         tranches = inv_data.get("payment_tranches", [])
         if tranches:
             tranche_id = tranches[0]["id"]
-            r2 = client_data["session"].post(f"{BASE_URL}/api/payments/checkout", json={
-                "invoice_id": inv["id"],
-                "tranche_id": tranche_id,
-                "origin_url": BASE_URL
-            })
+            r2 = client_data["session"].post(
+                f"{BASE_URL}/api/payments/checkout",
+                json={
+                    "invoice_id": inv["id"],
+                    "tranche_id": tranche_id,
+                    "origin_url": BASE_URL,
+                },
+            )
             # Should return 200 with checkout_url (Stripe test key)
             assert r2.status_code == 200, f"Checkout failed: {r2.text}"
             data = r2.json()
