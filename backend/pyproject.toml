@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "e3c-api"
+version = "1.0.0"
+description = "API REST pour E3C — Entreprise de Constructions, Guadeloupe"
+authors = ["E3C <contact@e3c-construction.com>"]
+readme = "README.md"
+packages = []
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.110"
+motor = "^3.3"
+pydantic = {extras = ["email"], version = "^2.0"}
+python-jose = {extras = ["cryptography"], version = "^3.3"}
+bcrypt = "^4.1"
+python-dotenv = "^1.0"
+python-multipart = "^0.0.9"
+reportlab = "^4.0"
+uvicorn = {extras = ["standard"], version = "^0.25"}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

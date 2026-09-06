@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /espace-client
+Disallow: /connexion
+Disallow: /inscription
+
+Sitemap: https://e3c-construction.com/sitemap.xml

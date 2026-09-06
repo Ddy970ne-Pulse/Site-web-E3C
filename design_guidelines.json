@@ -1,0 +1,121 @@
+{
+  "theme": "dark",
+  "archetype": "5 (Jewel & Luxury)",
+  "vibe": "Premium, High-end, Cinematic, Moody, Architectural, Trustworthy",
+  "colors": {
+    "background": "#0A0A0A",
+    "surface": "#121212",
+    "surface_glass": "rgba(18, 18, 18, 0.7)",
+    "primary": "#D4AF37",
+    "primary_hover": "#E6C65A",
+    "secondary": "#2A2A2A",
+    "border": "rgba(255, 255, 255, 0.1)",
+    "text": {
+      "main": "#FFFFFF",
+      "muted": "#A3A3A3",
+      "accent": "#D4AF37"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "heading": "Outfit, sans-serif",
+      "body": "Manrope, sans-serif",
+      "accent": "Outfit, sans-serif"
+    },
+    "hierarchy": {
+      "h1": "text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tighter text-white",
+      "h2": "text-3xl md:text-4xl font-semibold tracking-tight text-white",
+      "h3": "text-xl md:text-2xl font-medium tracking-tight text-white",
+      "h4": "text-lg md:text-xl font-medium text-white",
+      "body": "text-base text-gray-400 leading-relaxed",
+      "small": "text-sm text-gray-500 uppercase tracking-widest"
+    }
+  },
+  "spacing": {
+    "section_padding": "py-20 md:py-32",
+    "container": "max-w-7xl mx-auto px-6 md:px-12",
+    "grid_gap": "gap-6 md:gap-8",
+    "card_padding": "p-8 md:p-12"
+  },
+  "surfaces_and_effects": {
+    "header": "backdrop-blur-xl bg-[#0A0A0A]/70 border-b border-white/5 sticky top-0 z-50",
+    "cards": "bg-[#121212] border border-white/5 shadow-2xl hover:border-[#D4AF37]/30 transition-colors duration-300",
+    "glass": "backdrop-blur-2xl bg-white/5 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]",
+    "glow": "drop-shadow-[0_0_15px_rgba(212,175,55,0.4)]",
+    "image_overlay": "bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/60 to-transparent"
+  },
+  "motion": {
+    "hover": "transition-all duration-300 ease-in-out hover:-translate-y-1 hover:shadow-2xl",
+    "button": "transition-transform duration-200 active:scale-95",
+    "fade_in_up": "animate-in slide-in-from-bottom-8 fade-in duration-700 ease-out"
+  },
+  "layout_strategies": {
+    "hero": "Full height (min-h-[90vh]), dark image background with gradient overlay, massive typography aligned left or center, gold primary CTA. Minimal distraction.",
+    "services": "Asymmetrical Bento Grid (Tetris Mode A). Mix of tall, wide, and square cards to display the 9 BTP services dynamically. Avoid standard boring 3x3 grids.",
+    "gallery": "Masonry style or horizontal smooth-scroll gallery showcasing high-end architectural and construction imagery.",
+    "contact": "Glassmorphism form card layered over a subtle dark masonry texture background, ensuring a highly tactile, premium feel.",
+    "footer": "Generous spacing (py-32), dark contrasting background (e.g. #050505), large stylized E3C initials as a graphic element."
+  },
+  "components": {
+    "button": "bg-[#D4AF37] text-black font-semibold tracking-wide hover:bg-[#E6C65A] px-8 py-4 rounded-none (sharp edges for architectural feel)",
+    "floating_whatsapp": "fixed bottom-6 right-6 z-50 rounded-full bg-green-500 text-white p-4 shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:scale-110 transition-transform",
+    "accordion": "Shadcn accordion for FAQ. Custom styling: border-b border-white/10, text-white, plus/minus icons in gold.",
+    "form_input": "Shadcn inputs customized to have bg-white/5 border-white/10 text-white focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] rounded-none px-4 py-6"
+  },
+  "media": {
+    "hero": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/bed7ba01-3d73-4dbb-bf1f-2181e68e96b9/images/8ecb7ed7162572a62486742411ec38a5f21fe215e7d0a88b0123c3723ce818d3.png",
+      "description": "Wide-angle photograph of a modern luxury villa construction site at twilight golden hour. Use as main hero background with dark overlay."
+    },
+    "background_texture": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/bed7ba01-3d73-4dbb-bf1f-2181e68e96b9/images/47d58932993f59149ebdfb764f3bef56abd5416d3188679f1d7880428952520c.png",
+      "description": "Abstract dark architectural background with gold accents. Great for Footer or Values section background."
+    },
+    "masonry_texture": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/bed7ba01-3d73-4dbb-bf1f-2181e68e96b9/images/017d698e7e8c677b68fdcb7ae0b29fa1a9f8cd2da340b7be420f29ea090488ce.png",
+      "description": "Close-up masonry texture. Use as a subtle background for the 'Zone d'intervention' or 'Contact' section."
+    },
+    "services": [
+      {
+        "url": "https://static.prod-images.emergentagent.com/jobs/bed7ba01-3d73-4dbb-bf1f-2181e68e96b9/images/1fa4faaebc6cbd2fa9eb4e28504fe8f03aa55ef8263d53ed2376b3381ef53945.png",
+        "description": "Luxury modern bathroom interior. Perfect for Plomberie or Rénovation service card."
+      }
+    ],
+    "gallery": [
+      {
+        "url": "https://images.unsplash.com/photo-1767950470198-c9cd97f8ed87?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBtb2Rlcm4lMjBhcmNoaXRlY3R1cmUlMjBuaWdodHxlbnwwfHx8fDE3NzUyMzE0Nzh8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Modern house with pool at dusk"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1765046160589-9397f964bf01?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBtb2Rlcm4lMjBhcmNoaXRlY3R1cmUlMjBuaWdodHxlbnwwfHx8fDE3NzUyMzE0Nzh8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Modern skyscraper illuminated at night"
+      },
+      {
+        "url": "https://images.pexels.com/photos/5818261/pexels-photo-5818261.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Illuminated modern high-rise building"
+      },
+      {
+        "url": "https://images.pexels.com/photos/773842/pexels-photo-773842.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Stunning multi-storey modern building reflecting on calm waters"
+      }
+    ]
+  },
+  "icons": {
+    "library": "lucide-react",
+    "usage": "Use stroke-width 1.5 for a sophisticated, technical look. Colors should predominantly be the gold accent (#D4AF37) or muted gray for secondary icons."
+  },
+  "testing": {
+    "instructions": "All interactive and key informational elements MUST include a `data-testid` attribute in kebab-case."
+  },
+  "instructions_to_main_agent": [
+    "Install `lucide-react` for icons.",
+    "Install necessary shadcn components: accordion, input, button, textarea, form.",
+    "Do NOT use 'Inter' for headings. Use 'Outfit' for headings and 'Manrope' for body.",
+    "Follow the Archetype 5 (Jewel & Luxury) aesthetic: Deep obsidian background, gold accents, textured images, cinematic lighting. Avoid neon or playful colors.",
+    "Build the 9 BTP services in a 'Bento Grid' layout. Use the `gallery` images inside the bento boxes or a dedicated gallery section.",
+    "Header must be sticky with a glassmorphism effect.",
+    "Ensure all backgrounds that have text overlays maintain WCAG AA contrast, specifically using 'bg-black/50' or gradients on hero images.",
+    "Add a floating WhatsApp CTA at the bottom right.",
+    "Create stylized 'E3C' text as a logo in the header and footer, using the gold accent color and a bold geometric font style."
+  ]
+}
